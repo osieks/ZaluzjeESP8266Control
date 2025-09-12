@@ -24,8 +24,8 @@ unsigned long currentMillis = millis();
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 10.8;
-//10.8 wyrzucono EasyDDNS do NOIP
+float PROGRAM_VERSION = 10.82;
+//10.8 wyrzucono EasyDDNS do NOIP .82 ntp fix
 //10.7 to wersja pod kwaitki
 //10.3 - wywalono mail - dodanie logów
 //10.1 - mailing, fix zegara
@@ -56,7 +56,7 @@ WiFiUDP ntpUDP;
 //NTPClient timeClient(ntpUDP, "pool.ntp.org");
 NTPClient timeClient(ntpUDP);
 NTPClient timeClientPrev(ntpUDP);
-unsigned long timeClientdifference;
+unsigned long timeClientEpochTimedifference;
 //WifiServer
 
 int port=300;
@@ -406,8 +406,9 @@ void loop() {
       timeClientPrev=timeClient;
       timeClient.update();
       // jeśli nowy czas jest dalej niż 66 minut to zostawia stary czas
-      timeClientdifference = (timeClient.getEpochTime()-timeClientPrev.getEpochTime());
-      if(timeClientdifference>4000){
+      timeClientEpochTimedifference = (timeClient.getEpochTime()-timeClientPrev.getEpochTime());
+      
+      if( timeClientEpochTimedifference > 4000 && timeClient.getEpochTime() > 1599920798000){
         timeClient=timeClientPrev;
       }
     }
@@ -1089,9 +1090,12 @@ bool ObslugaKlienta(){
       client.println(timeClientPrev.getFormattedTime());
       client.println(timeClient.getFormattedTime());
             client.println("          <hr>");
+      client.print("timeClientPrev.getEpochTime(): ");
       client.println(timeClientPrev.getEpochTime());
+      client.print("timeClient.getEpochTime(): ");
       client.println(timeClient.getEpochTime());
-      client.println(timeClientdifference);
+      client.print("timeClientEpochTimedifference:");
+      client.println(timeClientEpochTimedifference);
       client.println("<p>");
       client.println("        </div>");
       client.println("      </div><br>");
