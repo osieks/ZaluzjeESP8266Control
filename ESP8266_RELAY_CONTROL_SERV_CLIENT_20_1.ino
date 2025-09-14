@@ -67,7 +67,7 @@ const char *ssid     = "osiek";
 
 String ssid[4] = {"Osiek", "pozdrawiam", "pozdrawiam_plus", "pozdrawiam2"};
 
-String password[2] = {"OsiekRulz123","osiekrulz"};
+String password[2] = {"osiekrulz","OsiekRulz123"};
 
 const int ms = 20;
 
@@ -650,17 +650,27 @@ void loop() {
       }
       if(!old_controls){
         if(sGPIO[0])digitalWrite(D0, LOW);
+        delay(100);
         if(sGPIO[1])digitalWrite(D0, HIGH);
+        delay(100);
         if(sGPIO[2])digitalWrite(D1, LOW);
+        delay(100);
         if(sGPIO[3])digitalWrite(D1, HIGH);
       }else{
         if(sGPIO[0])digitalWrite(D0, LOW);
+        delay(100);
         if(sGPIO[1])digitalWrite(D1, LOW);
+        delay(100);
         if(sGPIO[2])digitalWrite(D2, LOW);
+        delay(100);
         if(sGPIO[3])digitalWrite(D3, LOW);
+        delay(100);
         if(!sGPIO[0])digitalWrite(D0, HIGH);
+        delay(100);
         if(!sGPIO[1])digitalWrite(D1, HIGH);
+        delay(100);
         if(!sGPIO[2])digitalWrite(D2, HIGH);
+        delay(100);
         if(!sGPIO[3])digitalWrite(D3, HIGH);
       }
       
