@@ -43,7 +43,7 @@ int sGPIO[4];
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 10.9;
+float PROGRAM_VERSION = 20.1;
 //10.9 old coontrols
 //10.8 wyrzucono EasyDDNS do NOIP .82 ntp fix
 //10.7 to wersja pod kwaitki
@@ -65,7 +65,7 @@ const char *ssid     = "osiek";
 // FOR NodeMCU 1.0 12E
 // Fryzjer to ?
 
-String ssid[4] = {"Osiek", "pozdrawiam", "pozdrawiam_plus", "pozdrawiam2"};
+String ssid[4] = {"Osiek", "pozdrawiam", "pozdrawiam_plus", "pozdrawiam"};
 
 String password[2] = {"osiekrulz","OsiekRulz123"};
 
@@ -254,15 +254,20 @@ void setup() {
   if (WiFi.status() != WL_CONNECTED) {
     for(int pa=0;pa<2;pa++){
       for(int i=0;i<4;i++){
-        Serial.print("Connection to ");
+        Serial.print("Connecting to ");
         Serial.println(ssid[i]);
         WiFi.begin(ssid[i], password[pa]);
         delay(20000);
         if (WiFi.status() == WL_CONNECTED){
+          Serial.println("SUCCESS - connected to ...");
           break;
         }
         Serial.print("Failed connecting to ");
         Serial.println(ssid[i]);
+      }
+      if (WiFi.status() == WL_CONNECTED){
+        Serial.println("SUCCESS - connected to ...");
+        break;
       }
     }
   }
@@ -423,6 +428,7 @@ String httpGETRequest(String serverName) {
   if (httpResponseCode>0) {
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
+  
     payload = http.getString();
   }
   else {
@@ -455,11 +461,15 @@ void loop() {
         WiFi.begin(ssid[i], password[pa]);
         delay(20000);
         if (WiFi.status() == WL_CONNECTED){
-        Serial.print("SUCCESS - connected to ...");
+          Serial.println("SUCCESS - connected to ...");
           break;
         }
         Serial.print("Failed connecting to ");
         Serial.println(ssid[i]);
+      }
+      if (WiFi.status() == WL_CONNECTED){
+        Serial.println("SUCCESS - connected to ...");
+        break;
       }
     }
   } 
@@ -467,10 +477,11 @@ void loop() {
   
   
   if ((WiFiMulti.run() == WL_CONNECTED)) {
-    Serial.println(serverName);
     outputsState = httpGETRequest(serverName);
-    Serial.println(outputsState);
-
+    if(debug==1){
+      Serial.println(serverName);
+      Serial.println(outputsState);
+    }
     
     JSONVar myObject = JSON.parse(outputsState);
   
@@ -638,7 +649,7 @@ void loop() {
     }
     //delay(2000);
     
-    if(sGPIO[0] > 0 || sGPIO[1] > 0 || sGPIO[2] > 0 || sGPIO[3] > 0){  
+    //if(sGPIO[0] > 0 || sGPIO[1] > 0 || sGPIO[2] > 0 || sGPIO[3] > 0){  
       if(debug==1){
         Serial.println("jakiś sGPIO jest >0");
         for(int i=0; i<(sizeof(sGPIO)/sizeof(sGPIO[0]));i++){
@@ -648,33 +659,34 @@ void loop() {
           Serial.println(sGPIO[i]);
         }
       }
-      if(!old_controls){
-        if(sGPIO[0])digitalWrite(D0, LOW);
-        delay(100);
-        if(sGPIO[1])digitalWrite(D0, HIGH);
-        delay(100);
-        if(sGPIO[2])digitalWrite(D1, LOW);
-        delay(100);
-        if(sGPIO[3])digitalWrite(D1, HIGH);
-      }else{
-        if(sGPIO[0])digitalWrite(D0, LOW);
-        delay(100);
-        if(sGPIO[1])digitalWrite(D1, LOW);
-        delay(100);
-        if(sGPIO[2])digitalWrite(D2, LOW);
-        delay(100);
-        if(sGPIO[3])digitalWrite(D3, LOW);
-        delay(100);
-        if(!sGPIO[0])digitalWrite(D0, HIGH);
-        delay(100);
-        if(!sGPIO[1])digitalWrite(D1, HIGH);
-        delay(100);
-        if(!sGPIO[2])digitalWrite(D2, HIGH);
-        delay(100);
-        if(!sGPIO[3])digitalWrite(D3, HIGH);
-      }
-      
-    }else if(old_controls==LOW){
+    //}
+    if(!old_controls){
+      if(sGPIO[0])digitalWrite(D0, LOW);
+      delay(50);
+      if(sGPIO[1])digitalWrite(D0, HIGH);
+      delay(50);
+      if(sGPIO[2])digitalWrite(D1, LOW);
+      delay(50);
+      if(sGPIO[3])digitalWrite(D1, HIGH);
+    }else{
+      if(sGPIO[0])digitalWrite(D0, LOW);
+      delay(50);
+      if(sGPIO[1])digitalWrite(D1, LOW);
+      delay(50);
+      if(sGPIO[2])digitalWrite(D2, LOW);
+      delay(50);
+      if(sGPIO[3])digitalWrite(D3, LOW);
+      delay(50);
+      if(!sGPIO[0])digitalWrite(D0, HIGH);
+      delay(50);
+      if(!sGPIO[1])digitalWrite(D1, HIGH);
+      delay(50);
+      if(!sGPIO[2])digitalWrite(D2, HIGH);
+      delay(50);
+      if(!sGPIO[3])digitalWrite(D3, HIGH);
+    }
+    
+    if(old_controls==LOW){
             // AKTYWAXJA GDY AUTO
             if (aktywacja >= warAktywacji && automatyczny ) {
               aktywacja = 0;
