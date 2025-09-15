@@ -26,7 +26,7 @@ bool old_controls = HIGH;
 String outputsState;
 String serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
 JSONVar myObject;
-int sGPIO[4];
+int sGPIO[4]={0,0,0,0};
     
 // for no-ip
 //#include <EasyDDNS.h>
@@ -488,7 +488,7 @@ void loop() {
     // JSON.typeof(jsonVar) can be used to get the type of the var
     if (JSON.typeof(myObject) == "undefined") {
       Serial.println("Parsing input failed!");
-      return;
+      //return;
     }
 
     if(debug==1){
@@ -497,8 +497,10 @@ void loop() {
       Serial.print("JSON length() = ");
       Serial.println(myObject.length());
     }
-    for (int iii = 0; iii < myObject.length(); iii++) {
-      sGPIO[iii] = atoi(myObject[iii]);
+    if (JSON.typeof(myObject) != "undefined") {
+      for (int iii = 0; iii < myObject.length(); iii++) {
+        sGPIO[iii] = atoi(myObject[iii]);
+      }
     }
 
     /*
