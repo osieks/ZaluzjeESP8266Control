@@ -723,11 +723,11 @@ void loop() {
             //logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+String(aktywacja)+" >= "+String(warAktywacji)+" && "+String(automatyczny)+"</td></tr>";
             
             //otwarcie gdy jasno
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" otwarcie gdy jasno </td><td>if((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset))"+"</td></tr>";
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" otwarcie gdy jasno </td><td>if((currentHour * 60 ("+currentHour*60+") + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset))"+"</td></tr>";
             logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"otwarcie gdy jasno </td><td>if(("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunrise+" + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+") && ("+currentHour+" * 60 + "+currentMinute+") < ("+Sunset+" + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+"))</td></tr>";
               
             // zamknięcie gdy ciemno
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset))"+"</td></tr>";
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if ((currentHour * 60 ("+currentHour*60+") + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset))"+"</td></tr>";
             logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if (("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunset+" + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+"))</td></tr>";
                 
             if (aktywacja >= warAktywacji && automatyczny ) {
@@ -735,8 +735,6 @@ void loop() {
               request = "";
 
               //otwarcie gdy jasno
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" otwarcie gdy jasno </td><td>if((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset))"+"</td></tr>";
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"otwarcie gdy jasno </td><td>if(("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunrise+" + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+") && ("+currentHour+" * 60 + "+currentMinute+") < ("+Sunset+" + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+"))</td></tr>";
               if ((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset)) {
                 Serial.print("UP \n");
                 logMessage[logNr++]="<tr><td>"+currentDate+"</td><td>new_controls Auto UP"+"</td></tr>";
@@ -761,10 +759,10 @@ void loop() {
             //logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+String(aktywacja)+" >= "+String(warAktywacji)+" && "+String(automatyczny)+"</td></tr>";
             //otwarcie gdy jasno
             logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" otwarcie gdy jasno </td><td>if((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset))"+"</td></tr>";
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"otwarcie gdy jasno </td><td>if(("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunrise+" + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+") && ("+currentHour+" * 60 + "+currentMinute+") < ("+Sunset+" + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+"))</td></tr>";
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"otwarcie gdy jasno </td><td>if(("+currentHour+" * 60 ("+currentHour*60+") + "+currentMinute+") >= ("+Sunrise+" + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+") && ("+currentHour+" * 60 + "+currentMinute+") < ("+Sunset+" + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+"))</td></tr>";
             // zamknięcie gdy ciemno
             logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset))</td></tr>";
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if (("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunset+" + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+"))</td></tr>";
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if (("+currentHour+" * 60 ("+currentHour*60+") + "+currentMinute+") >= ("+Sunset+" + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+"))</td></tr>";
               
             // AKTYWAXJA GDY AUTO
             if (aktywacja >= warAktywacji && automatyczny ) {
