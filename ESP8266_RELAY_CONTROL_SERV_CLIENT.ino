@@ -3,7 +3,7 @@
 #############  DEBUG  ##############
 ####################################
 */
-bool debug = 0;
+bool debug = 1;
 
 #include <ESP8266WiFi.h>
 #include <NTPClient.h>
@@ -548,6 +548,7 @@ void loop() {
   /******************************ms****************************************/
   if (currentMillis - previousMillis >= ms) {
     previousMillis = currentMillis;
+    logNrDEBUG=0;
     if(WiFi.status() == WL_CONNECTED){
       timeClient.update();
     }
@@ -732,22 +733,45 @@ void loop() {
 
     if(old_controls==LOW){
             // AKTYWAXJA GDY AUTO
-            //logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>aktywacja >= warAktywacji && automatyczny"+"</td></tr>";
-            //logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+String(aktywacja)+" >= "+String(warAktywacji)+" && "+String(automatyczny)+"</td></tr>";
- 
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
+            if(logNrDEBUG>=30)logNrDEBUG=0;
+            Serial.println(logDEBUG[logNrDEBUG-1]);
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
+            if(logNrDEBUG>=30)logNrDEBUG=0;
+            Serial.println(logDEBUG[logNrDEBUG-1]);
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+            if(logNrDEBUG>=30)logNrDEBUG=0;
+            Serial.println(logDEBUG[logNrDEBUG-1]);
+            
             //if (aktywacja >= warAktywacji && automatyczny ) {
-            if (ostatniaAktywacja >= (currentHour * 60 + currentMinute + 60) && automatyczny ) {
+            if (ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny ) {
               //aktywacja = 0;
               request = "";
-
+              //otwarcie gdy jasno
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+               Serial.print(logDEBUG[logNrDEBUG-1]);
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+              Serial.print(logDEBUG[logNrDEBUG-1]);
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+               Serial.print(logDEBUG[logNrDEBUG-1]);
+              
+              // zamknięcie gdy ciemno
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+               Serial.print(logDEBUG[logNrDEBUG-1]);
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+               Serial.print(logDEBUG[logNrDEBUG-1]);
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+               Serial.print(logDEBUG[logNrDEBUG-1]);
+               
               //otwarcie gdy jasno
               if ((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset)) {
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
+                
                
                 ostatniaAktywacja = currentHour * 60 + currentMinute;
                 
@@ -772,15 +796,7 @@ void loop() {
             
               // zamknięcie gdy ciemno
               } else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset)) {   
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-               
                 ostatniaAktywacja = currentHour * 60 + currentMinute;
-                
                 logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
                 if(logNrDEBUG>=30)logNrDEBUG=0;
                 
@@ -806,8 +822,17 @@ void loop() {
             //  if (aktywacja > 15000)aktywacja = 15000;
             //}
     }else{ 
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
+            if(logNrDEBUG>=30)logNrDEBUG=0;
+            Serial.print(logDEBUG[logNrDEBUG-1]);
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
+            if(logNrDEBUG>=30)logNrDEBUG=0;
+            Serial.print(logDEBUG[logNrDEBUG-1]);
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+            if(logNrDEBUG>=30)logNrDEBUG=0;
+            Serial.print(logDEBUG[logNrDEBUG-1]);
             // AKTYWAXJA GDY AUTO
-            if (ostatniaAktywacja >= (currentHour * 60 + currentMinute + 60) && automatyczny ) {
+            if (ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny ) {
               //aktywacja = 0;
               request = "";
               digitalWrite(D0, HIGH);
@@ -1003,141 +1028,181 @@ bool ObslugaKlienta(){
       }else if (request.indexOf("TRYB=wschodzachod") != -1){
         tryb = 0;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("TRYB=godziny") != -1){
+      }else if (request.indexOf("TRYB=godziny") != -1){
         tryb = 1;
         request_fulfilled=1;
-      }
-      
-      else if (request.indexOf("openning_LEVEL=1") != -1){
+      }else if (request.indexOf("openning_LEVEL=1") != -1){
         openning_level = 1;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("openning_LEVEL=2") != -1){
+      }else if (request.indexOf("openning_LEVEL=2") != -1){
         openning_level = 2;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("openning_LEVEL=3") != -1){
+      }else if (request.indexOf("openning_LEVEL=3") != -1){
         openning_level = 3;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("openning_LEVEL=4") != -1){
+      }else if (request.indexOf("openning_LEVEL=4") != -1){
         openning_level = 4;
         request_fulfilled=1;
-      }
-
-      else if (request.indexOf("/SET_TIME_OPEN=4") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN=4") != -1){
         wedlog_godzina_otwarcia = 4;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_OPEN=5") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN=5") != -1){
         wedlog_godzina_otwarcia = 5;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_OPEN=6") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN=6") != -1){
         wedlog_godzina_otwarcia = 6;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_OPEN=7") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN=7") != -1){
         wedlog_godzina_otwarcia = 7;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_OPEN=8") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN=8") != -1){
         wedlog_godzina_otwarcia = 8;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_OPEN=9") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN=9") != -1){
         wedlog_godzina_otwarcia = 9;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_OPEN=10") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN=10") != -1){
         wedlog_godzina_otwarcia = 10;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_OPEN=11") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN=11") != -1){
         wedlog_godzina_otwarcia = 11;
         request_fulfilled=1;
       }
       else if (request.indexOf("/SET_TIME_OPEN=12") != -1){
         wedlog_godzina_otwarcia = 12;
         request_fulfilled=1;
-      }
-      
-      else if (request.indexOf("/SET_TIME_OPEN_MIN=0") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN_MIN=0") != -1){
         wedlog_minuta_otwarcia = 0;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_OPEN_MIN=15") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN_MIN=15") != -1){
         wedlog_minuta_otwarcia = 15;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_OPEN_MIN=30") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN_MIN=30") != -1){
         wedlog_minuta_otwarcia = 30;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_OPEN_MIN=45") != -1){
+      }else if (request.indexOf("/SET_TIME_OPEN_MIN=45") != -1){
         wedlog_minuta_otwarcia = 45;  
         request_fulfilled=1;
       }
-          
       else if (request.indexOf("/SET_TIME_CLOSE=14") != -1){
         wedlog_godzina_zamkniecia = 14;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE=15") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE=15") != -1){
         wedlog_godzina_zamkniecia = 15;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE=16") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE=16") != -1){
         wedlog_godzina_zamkniecia = 16;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE=17") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE=17") != -1){
         wedlog_godzina_zamkniecia = 17;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE=18") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE=18") != -1){
         wedlog_godzina_zamkniecia = 18;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE=19") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE=19") != -1){
         wedlog_godzina_zamkniecia = 19;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE=20") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE=20") != -1){
         wedlog_godzina_zamkniecia = 20;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE=21") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE=21") != -1){
         wedlog_godzina_zamkniecia = 21;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE=22") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE=22") != -1){
         wedlog_godzina_zamkniecia = 22;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE=23") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE=23") != -1){
         wedlog_godzina_zamkniecia = 23;
         request_fulfilled=1;
-      }
-      
-      else if (request.indexOf("/SET_TIME_CLOSE_MIN=0") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE_MIN=0") != -1){
         wedlog_minuta_zamkniecia = 0;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE_MIN=15") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE_MIN=15") != -1){
         wedlog_minuta_zamkniecia = 15;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE_MIN=30") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE_MIN=30") != -1){
         wedlog_minuta_zamkniecia = 30;
         request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE_MIN=45") != -1){
+      }else if (request.indexOf("/SET_TIME_CLOSE_MIN=45") != -1){
         wedlog_minuta_zamkniecia = 45;
         request_fulfilled=1;
       }
-
+      else if (request.indexOf("/OFFSET_SUNRISE_H=-2") != -1){
+        SunriseHourOffset = -2;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNRISE_H=-1") != -1){
+        SunriseHourOffset = -1;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNRISE_H=0") != -1){
+        SunriseHourOffset = 0;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNRISE_H=1") != -1){
+        SunriseHourOffset = 1;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNRISE_H=2") != -1){
+        SunriseHourOffset = 2;
+        request_fulfilled=1;
+      }
+      else if (request.indexOf("/OFFSET_SUNSET_H=-2") != -1){
+        SunsetHourOffset = -2;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNSET_H=-1") != -1){
+        SunsetHourOffset = -1;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNSET_H=0") != -1){
+        SunsetHourOffset = 0;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNSET_H=1") != -1){
+        SunsetHourOffset = 1;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNSET_H=2") != -1){
+        SunsetHourOffset = 2;
+        request_fulfilled=1;
+      }
+      else if (request.indexOf("/OFFSET_SUNRISE_M=-45") != -1){
+        SunriseMinuteOffset = -45;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNRISE_M=-30") != -1){
+        SunriseMinuteOffset = -30;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNRISE_M=-15") != -1){
+        SunriseMinuteOffset = -15;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNRISE_M=0") != -1){
+        SunriseMinuteOffset = 0;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNRISE_M=15") != -1){
+        SunriseMinuteOffset = 15;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNRISE_M=30") != -1){
+        SunriseMinuteOffset = 30;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNRISE_M=45") != -1){
+        SunriseMinuteOffset = 45;
+        request_fulfilled=1;
+      }
+      else if (request.indexOf("/OFFSET_SUNSET_M=-45") != -1){
+        SunsetMinuteOffset = -45;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNSET_M=-35") != -1){
+        SunsetMinuteOffset = -30;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNSET_M=-15") != -1){
+        SunsetMinuteOffset = -15;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNSET_M=0") != -1){
+        SunsetMinuteOffset = 0;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNSET_M=15") != -1){
+        SunsetMinuteOffset = 15;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNSET_M=30") != -1){
+        SunsetMinuteOffset = 30;
+        request_fulfilled=1;
+      }else if (request.indexOf("/OFFSET_SUNSET_M=45") != -1){
+        SunsetMinuteOffset = 45;
+        request_fulfilled=1;
+      }
       
       if(singleLogMessage!="")logMessage[logNr++]="<tr><td>"+currentDate+"</td><td>"+singleLogMessage+"</td></tr>";
       
@@ -1489,6 +1554,7 @@ bool ObslugaKlienta(){
       client.println("<p class='w3-large'>Wschód</p>");
       client.println("<div class='dropdown-content'>");
       client.println("<ul>");
+      client.println("<li><a href='/OFFSET_SUNRISE_H=-2'>-2 h</a></li>");
       client.println("<li><a href='/OFFSET_SUNRISE_H=-1'>-1 h</a></li>");
       client.println("<li><a href='/OFFSET_SUNRISE_H=0'>0 h</a></li>");
       client.println("<li><a href='/OFFSET_SUNRISE_H=1'>+1 h</a></li>");
@@ -1507,6 +1573,7 @@ bool ObslugaKlienta(){
       client.println("<p class='w3-large'>Zachód</p>");
       client.println("<div class='dropdown-content'>");
       client.println("<ul>");
+      client.println("<li><a href='/OFFSET_SUNSET_H=-2'>-2 h</a></li>");
       client.println("<li><a href='/OFFSET_SUNSET_H=-1'>-1 h</a></li>");
       client.println("<li><a href='/OFFSET_SUNSET_H=0'>0 h</a></li>");
       client.println("<li><a href='/OFFSET_SUNSET_H=1'>+1 h</a></li>");
