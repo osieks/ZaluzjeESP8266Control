@@ -43,7 +43,7 @@ int sGPIO[4]={0,0,0,0};
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 20.12;
+float PROGRAM_VERSION = 20.13;
 //20.12 nowy warunek aktywacji ostatniaAktywacja +60
 //20.05 logging
 //20. new server
@@ -723,70 +723,58 @@ void loop() {
     if(ostatniaAktywacja >= 24*60){
       ostatniaAktywacja=0;
     }
-    if(debug==1){
-      Serial.println("if(aktywacja >= warAktywacji && automatyczny )");
-      Serial.println("if("+String(aktywacja)+" >= "+String(warAktywacji)+" && "+String(automatyczny)+" )");
-      Serial.println("#### nowa aktywacja ####");
-      Serial.println("if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )");
-      Serial.println("if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )");
-    }
 
     if(old_controls==LOW){
             // AKTYWAXJA GDY AUTO
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
-            if(logNrDEBUG>=30)logNrDEBUG=0;
-            Serial.println(logDEBUG[logNrDEBUG-1]);
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
-            if(logNrDEBUG>=30)logNrDEBUG=0;
-            Serial.println(logDEBUG[logNrDEBUG-1]);
             logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
             if(logNrDEBUG>=30)logNrDEBUG=0;
-            Serial.println(logDEBUG[logNrDEBUG-1]);
+            Serial.print(logDEBUG[logNrDEBUG-1]);
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny )"+"</tr></td>";
+            if(logNrDEBUG>=30)logNrDEBUG=0;
+            Serial.print(logDEBUG[logNrDEBUG-1]);
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" + 60 < ("+currentHour+" * 60 + "+currentMinute+") && "+automatyczny+" )"+"</tr></td>";
+            if(logNrDEBUG>=30)logNrDEBUG=0;
+            Serial.print(logDEBUG[logNrDEBUG-1]);
             
             //if (aktywacja >= warAktywacji && automatyczny ) {
-            if (ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny ) {
-              //aktywacja = 0;
-              request = "";
-              //otwarcie gdy jasno
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-               Serial.print(logDEBUG[logNrDEBUG-1]);
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
+            if (ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute ) && automatyczny ) {
+              
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK aktywacja</tr></td>";
               if(logNrDEBUG>=30)logNrDEBUG=0;
               Serial.print(logDEBUG[logNrDEBUG-1]);
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-               Serial.print(logDEBUG[logNrDEBUG-1]);
               
-              // zamknięcie gdy ciemno
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-               Serial.print(logDEBUG[logNrDEBUG-1]);
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-               Serial.print(logDEBUG[logNrDEBUG-1]);
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-               Serial.print(logDEBUG[logNrDEBUG-1]);
-               
+              //aktywacja = 0;
+              request = "";
+              
               //otwarcie gdy jasno
-              if ((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset)) {
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>if (currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset)</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+              Serial.println(logDEBUG[logNrDEBUG-1]);
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>if ("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunrise+" + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+") && ("+currentHour+" * 60 + "+currentMinute+") < ("+Sunrise+"+60 + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+")</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+              Serial.println(logDEBUG[logNrDEBUG-1]);
+                              
+              // zamknięcie gdy ciemno
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset) && ((currentHour * 60 + currentMinute) < (Sunset+60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) && x_times_down < 5)"+"</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+              Serial.println(logDEBUG[logNrDEBUG-1]);
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"else if (("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunset+" + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+") && (("+currentHour+" * 60 + "+currentMinute+") < ("+Sunset+"+60 + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+")) && "+x_times_down+" < 5)"+"</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+              Serial.println(logDEBUG[logNrDEBUG-1]);
                 
-               
+              //otwarcie gdy jasno
+              if ((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && ((currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset))) {
                 ostatniaAktywacja = currentHour * 60 + currentMinute;
                 
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK if</tr></td>";
                 if(logNrDEBUG>=30)logNrDEBUG=0;
-                
-                //otwarcie gdy jasno
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" otwarcie gdy jasno </td><td>if((currentHour * 60 + currentMinute) >= (Sunrise) && (currentHour * 60 + currentMinute) < (Sunrise+60)</td></tr>";
+                Serial.println(logDEBUG[logNrDEBUG-1]);
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
                 if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" otwarcie gdy jasno </td><td>if(("+currentHour+" * 60 ["+String(currentHour*60)+"] + "+currentMinute+") >= ("+Sunrise+") && ("+currentHour+" * 60 + "+currentMinute+") < ("+(Sunrise+60)+")</td></tr>";
+                Serial.println(logDEBUG[logNrDEBUG-1]);
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+ostatniaAktywacja+" = "+currentHour+" * 60 + "+currentMinute+";</tr></td>";
                 if(logNrDEBUG>=30)logNrDEBUG=0;
-                if(debug==1){
-                  Serial.print(logDEBUG[logNrDEBUG-2]);
-                  Serial.print(logDEBUG[logNrDEBUG-1]);
-                  }
+                Serial.println(logDEBUG[logNrDEBUG-1]);
                 
                 Serial.print("UP \n");
                 logMessage[logNr++]="<tr><td>"+currentDate+"</td><td>new_controls Auto UP"+"</td></tr>";
@@ -795,21 +783,20 @@ void loop() {
                 going_up=HIGH;
             
               // zamknięcie gdy ciemno
-              } else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset)) {   
+              } else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunset+60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) {   
                 ostatniaAktywacja = currentHour * 60 + currentMinute;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+                
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK else if</tr></td>";
                 if(logNrDEBUG>=30)logNrDEBUG=0;
+                Serial.println(logDEBUG[logNrDEBUG-1]);
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+                Serial.println(logDEBUG[logNrDEBUG-1]);
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+ostatniaAktywacja+" = "+currentHour+" * 60 + "+currentMinute+";</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+                Serial.println(logDEBUG[logNrDEBUG-1]);
                 
                 //zamknięcie gdy ciemno
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if ((currentHour * 60 + currentMinute) >= (Sunset))"+"</td></tr>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if (("+currentHour+" * 60 ["+String(currentHour*60)+"] + "+currentMinute+") >= ("+Sunset+"))</td></tr>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                if(debug==1){
-                  Serial.print(logDEBUG[logNrDEBUG-2]);
-                  Serial.print(logDEBUG[logNrDEBUG-1]);
-                  }
-                
                 Serial.print("DOWN \n");
                 logMessage[logNr++]+="<tr><td>"+currentDate+"</td><td>new_controls Auto DOWN "+"</td></tr>";
                 delay(2000);
@@ -822,17 +809,24 @@ void loop() {
             //  if (aktywacja > 15000)aktywacja = 15000;
             //}
     }else{ 
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
-            if(logNrDEBUG>=30)logNrDEBUG=0;
-            Serial.print(logDEBUG[logNrDEBUG-1]);
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
-            if(logNrDEBUG>=30)logNrDEBUG=0;
-            Serial.print(logDEBUG[logNrDEBUG-1]);
+            // AKTYWAXJA GDY AUTO
             logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
             if(logNrDEBUG>=30)logNrDEBUG=0;
             Serial.print(logDEBUG[logNrDEBUG-1]);
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny )"+"</tr></td>";
+            if(logNrDEBUG>=30)logNrDEBUG=0;
+            Serial.print(logDEBUG[logNrDEBUG-1]);
+            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" + 60 < ("+currentHour+" * 60 + "+currentMinute+") && "+automatyczny+" )"+"</tr></td>";
+            if(logNrDEBUG>=30)logNrDEBUG=0;
+            Serial.print(logDEBUG[logNrDEBUG-1]);
+            
             // AKTYWAXJA GDY AUTO
-            if (ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny ) {
+            if (ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny ) {
+              
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK aktywacja</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+              Serial.print(logDEBUG[logNrDEBUG-1]);
+              
               //aktywacja = 0;
               request = "";
               digitalWrite(D0, HIGH);
@@ -843,28 +837,33 @@ void loop() {
               }
                
               //otwarcie gdy jasno
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>if (currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset)</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+              Serial.println(logDEBUG[logNrDEBUG-1]);
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>if ("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunrise+" + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+") && ("+currentHour+" * 60 + "+currentMinute+") < ("+Sunrise+"+60 + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+")</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+              Serial.println(logDEBUG[logNrDEBUG-1]);
+                              
+              // zamknięcie gdy ciemno
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset) && ((currentHour * 60 + currentMinute) < (Sunset+60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) && x_times_down < 5)"+"</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+              Serial.println(logDEBUG[logNrDEBUG-1]);
+              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"else if (("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunset+" + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+") && (("+currentHour+" * 60 + "+currentMinute+") < ("+Sunset+"+60 + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+")) && "+x_times_down+" < 5)"+"</tr></td>";
+              if(logNrDEBUG>=30)logNrDEBUG=0;
+              Serial.println(logDEBUG[logNrDEBUG-1]);
+                
               if ((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset) && x_times_up < 10) {
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-               
                 ostatniaAktywacja = currentHour * 60 + currentMinute;
                 
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK if</tr></td>";
                 if(logNrDEBUG>=30)logNrDEBUG=0;
-                
-                //otwarcie gdy jasno
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" otwarcie gdy jasno </td><td>if((currentHour * 60 + currentMinute) >= (Sunrise) && (currentHour * 60 + currentMinute) < (Sunrise+60) && x_times_up < 10)</td></tr>";
+                Serial.println(logDEBUG[logNrDEBUG-1]);
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
                 if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" otwarcie gdy jasno </td><td>if(("+currentHour+" * 60 ["+String(currentHour*60)+"] + "+currentMinute+") >= ("+Sunrise+") && ("+currentHour+" * 60 + "+currentMinute+") < ("+(Sunrise+60)+") && "+x_times_up+" < 10)</td></tr>";
+                Serial.println(logDEBUG[logNrDEBUG-1]);
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+ostatniaAktywacja+" = "+currentHour+" * 60 + "+currentMinute+";</tr></td>";
                 if(logNrDEBUG>=30)logNrDEBUG=0;
-                if(debug==1){
-                  Serial.print(logDEBUG[logNrDEBUG-2]);
-                  Serial.print(logDEBUG[logNrDEBUG-1]);
-                  }
+                Serial.println(logDEBUG[logNrDEBUG-1]);
                 
                 Serial.print("UP \n");
                 logMessage[logNr++]+="<tr><td>"+currentDate+"</td><td>old_controls Auto UP "+"</td></tr>";
@@ -896,28 +895,18 @@ void loop() {
                 x_times_up++;
                 x_times_down = 0;
               // zamknięcie gdy ciemno
-              } else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset) && x_times_down < 5) {
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-               
+              } else if (((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset)) && ((currentHour * 60 + currentMinute) < (Sunset+60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) && x_times_down < 5) {
                 ostatniaAktywacja = currentHour * 60 + currentMinute;
-                
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK else if</tr></td>";
                 if(logNrDEBUG>=30)logNrDEBUG=0;
-                
-                //zamknięcie gdy ciemno
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if ((currentHour * 60 + currentMinute) >= (Sunset))"+"</td></tr>";
+                Serial.println(logDEBUG[logNrDEBUG-1]);
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
                 if(logNrDEBUG>=30)logNrDEBUG=0;
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if (("+currentHour+" * 60 ["+String(currentHour*60)+"] + "+currentMinute+") >= ("+Sunset+"))</td></tr>";
+                Serial.println(logDEBUG[logNrDEBUG-1]);
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+ostatniaAktywacja+" = "+currentHour+" * 60 + "+currentMinute+";</tr></td>";
                 if(logNrDEBUG>=30)logNrDEBUG=0;
-                 if(debug==1){
-                  Serial.print(logDEBUG[logNrDEBUG-2]);
-                  Serial.print(logDEBUG[logNrDEBUG-1]);
-                  }
+                Serial.println(logDEBUG[logNrDEBUG-1]);
                 
                 Serial.print("DOWN \n");
                 logMessage[logNr++]+="<tr><td>"+currentDate+"</td><td>old_controls Auto DOWN"+"</td></tr>";
