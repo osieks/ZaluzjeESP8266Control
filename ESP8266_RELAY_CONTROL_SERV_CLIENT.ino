@@ -43,7 +43,8 @@ int sGPIO[4]={0,0,0,0};
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 20.10;
+float PROGRAM_VERSION = 20.12;
+//20.12 nowy warunek aktywacji ostatniaAktywacja +60
 //20.05 logging
 //20. new server
 //10.9 old coontrols
@@ -91,6 +92,7 @@ String months[12] = {"January", "February", "March", "April", "May", "June", "Ju
 String request;
 
 int aktywacja = 999999;
+long ostatniaAktywacja = 0;
 int warAktywacji = 2000; //5 * 60 /*sekund*/ / (ms / 1000.0);
 unsigned int x_times_up = 0, x_times_down = 0;
 
@@ -717,20 +719,40 @@ void loop() {
       delay(50);
       if(!sGPIO[3])digitalWrite(D3, HIGH);
     }
+    if(ostatniaAktywacja >= 24*60){
+      ostatniaAktywacja=0;
+    }
+    if(debug==1){
+      Serial.println("if(aktywacja >= warAktywacji && automatyczny )");
+      Serial.println("if("+String(aktywacja)+" >= "+String(warAktywacji)+" && "+String(automatyczny)+" )");
+      Serial.println("#### nowa aktywacja ####");
+      Serial.println("if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )");
+      Serial.println("if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )");
+    }
 
-    Serial.println("(aktywacja >= warAktywacji && automatyczny )");
-    Serial.println("("+String(aktywacja)+" >= "+String(warAktywacji)+" && "+String(automatyczny)+" )");
     if(old_controls==LOW){
             // AKTYWAXJA GDY AUTO
             //logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>aktywacja >= warAktywacji && automatyczny"+"</td></tr>";
             //logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+String(aktywacja)+" >= "+String(warAktywacji)+" && "+String(automatyczny)+"</td></tr>";
  
-            if (aktywacja >= warAktywacji && automatyczny ) {
-              aktywacja = 0;
+            //if (aktywacja >= warAktywacji && automatyczny ) {
+            if (ostatniaAktywacja >= (currentHour * 60 + currentMinute + 60) && automatyczny ) {
+              //aktywacja = 0;
               request = "";
 
               //otwarcie gdy jasno
               if ((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset)) {
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+               
+                ostatniaAktywacja = currentHour * 60 + currentMinute;
+                
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
                 
                 //otwarcie gdy jasno
                 logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" otwarcie gdy jasno </td><td>if((currentHour * 60 + currentMinute) >= (Sunrise) && (currentHour * 60 + currentMinute) < (Sunrise+60)</td></tr>";
@@ -749,7 +771,18 @@ void loop() {
                 going_up=HIGH;
             
               // zamknięcie gdy ciemno
-              } else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset)) {    
+              } else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset)) {   
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+               
+                ostatniaAktywacja = currentHour * 60 + currentMinute;
+                
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
                 
                 //zamknięcie gdy ciemno
                 logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if ((currentHour * 60 + currentMinute) >= (Sunset))"+"</td></tr>";
@@ -767,14 +800,15 @@ void loop() {
                 digitalWrite(D0, HIGH);
                 going_up=LOW;
               }
-            } else {
-              aktywacja++;
-              if (aktywacja > 15000)aktywacja = 15000;
             }
+            //else {
+            //  aktywacja++;
+            //  if (aktywacja > 15000)aktywacja = 15000;
+            //}
     }else{ 
             // AKTYWAXJA GDY AUTO
-            if (aktywacja >= warAktywacji && automatyczny ) {
-              aktywacja = 0;
+            if (ostatniaAktywacja >= (currentHour * 60 + currentMinute + 60) && automatyczny ) {
+              //aktywacja = 0;
               request = "";
               digitalWrite(D0, HIGH);
               digitalWrite(D1, HIGH);
@@ -785,6 +819,17 @@ void loop() {
                
               //otwarcie gdy jasno
               if ((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset) && x_times_up < 10) {
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+               
+                ostatniaAktywacja = currentHour * 60 + currentMinute;
+                
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
                 
                 //otwarcie gdy jasno
                 logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" otwarcie gdy jasno </td><td>if((currentHour * 60 + currentMinute) >= (Sunrise) && (currentHour * 60 + currentMinute) < (Sunrise+60) && x_times_up < 10)</td></tr>";
@@ -827,6 +872,17 @@ void loop() {
                 x_times_down = 0;
               // zamknięcie gdy ciemno
               } else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset) && x_times_down < 5) {
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja < (currentHour * 60 + currentMinute + 60) && automatyczny )"+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" < ("+currentHour+" * 60 + "+currentMinute+" + 60) && "+automatyczny+" )"+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
+               
+                ostatniaAktywacja = currentHour * 60 + currentMinute;
+                
+                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
+                if(logNrDEBUG>=30)logNrDEBUG=0;
                 
                 //zamknięcie gdy ciemno
                 logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+" zamknięcie gdy ciemno </td><td>if ((currentHour * 60 + currentMinute) >= (Sunset))"+"</td></tr>";
@@ -868,10 +924,11 @@ void loop() {
                 x_times_down++;
                 x_times_up = 0;
               }
-            } else {
-              aktywacja++;
-              if (aktywacja > 15000)aktywacja = 15000;
             }
+            //else {
+            //  aktywacja++;
+            //  if (aktywacja > 15000)aktywacja = 15000;
+            //}
     }
   }
 }
