@@ -43,7 +43,7 @@ int sGPIO[4]={0,0,0,0};
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 20.13;
+float PROGRAM_VERSION = 20.20;
 //20.12 nowy warunek aktywacji ostatniaAktywacja +60
 //20.05 logging
 //20. new server
