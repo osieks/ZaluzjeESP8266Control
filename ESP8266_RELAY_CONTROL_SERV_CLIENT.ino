@@ -1,9 +1,9 @@
 /*
-####################################
-#############  DEBUG  ##############
-####################################
+  ####################################
+  #############  DEBUG  ##############
+  ####################################
 */
-bool debug = 1;
+bool debug = 0;
 
 #include <ESP8266WiFi.h>
 #include <NTPClient.h>
@@ -20,14 +20,15 @@ unsigned long currentMillis = millis();
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 #include <ESP8266WiFiMulti.h>
-ESP8266WiFiMulti WiFiMulti;
+ESP8266WiFiMulti wiFiMulti;
+const uint32_t connectTimeoutMs = 20000;
 
 bool old_controls = HIGH;
 String outputsState;
 String serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
 JSONVar myObject;
-int sGPIO[4]={0,0,0,0};
-    
+int sGPIO[4] = {0, 0, 0, 0};
+
 // for no-ip
 //#include <EasyDDNS.h>
 //#include <ESP8266HTTPClient.h>
@@ -43,7 +44,9 @@ int sGPIO[4]={0,0,0,0};
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 20.20;
+float PROGRAM_VERSION = 20.30;
+//20.30 added wifi setup every time in loop - added more ifs for the server side
+//20.20 1pass
 //20.12 nowy warunek aktywacji ostatniaAktywacja +60
 //20.05 logging
 //20. new server
@@ -58,11 +61,11 @@ float PROGRAM_VERSION = 20.20;
 // 4.x - freedns online przez osiek.zapto.org
 
 /*
-// Replace with your network credentials
-const char *ssid3     = "pozdrawiam";
-const char *ssid1     = "pozdrawiam2";
-const char *ssid2     = "pozdrawiam_plus";
-const char *ssid     = "osiek";
+  // Replace with your network credentials
+  const char *ssid3     = "pozdrawiam";
+  const char *ssid1     = "pozdrawiam2";
+  const char *ssid2     = "pozdrawiam_plus";
+  const char *ssid     = "osiek";
 */
 
 // FOR NodeMCU 1.0 12E
@@ -70,7 +73,7 @@ const char *ssid     = "osiek";
 
 String ssid[3] = {"Osiek", "pozdrawiam", "pozdrawiam_plus"};
 
-String password[2] = {"osiekrulz","OsiekRulz123"};
+String password = "osiekrulz";
 
 const int ms = 20;
 
@@ -82,7 +85,7 @@ unsigned long timeClientEpochTimedifference;
 unsigned long timeClientPrevEpochTime;
 //WifiServer
 
-int port=300;
+int port = 300;
 WiFiServer server(port);
 
 //Week Days
@@ -96,73 +99,68 @@ long ostatniaAktywacja = 0;
 int warAktywacji = 2000; //5 * 60 /*sekund*/ / (ms / 1000.0);
 unsigned int x_times_up = 0, x_times_down = 0;
 
-    
+
 String nazwaHosta = "esp8266_no_hostname";
 
-void based_on_ip(){
-    String temp;
-    //Wifi Server Startup
-    if(WiFi.localIP()[3] == 36){
-      ArduinoOTA.setHostname("esp8266_mateusz");
-      WiFi.setHostname("esp8266_mateusz");
-      nazwaHosta="esp8266_mateusz";
-      port=302;
-      serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Mateusz";
-    }else if(WiFi.localIP()[3]==49){
-      ArduinoOTA.setHostname("esp8266_lauba");
-      WiFi.setHostname("esp8266_lauba");
-      nazwaHosta="esp8266_lauba";
-      port=303;
-      serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Lauba";
-    }else if(WiFi.localIP()[3]==64){
-      ArduinoOTA.setHostname("esp8266_kuchnia");
-      WiFi.setHostname("esp8266_kuchnia");
-      nazwaHosta="esp8266_kuchnia";
-      port=305;
-      serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
-    }else if(WiFi.localIP()[3]==70){
-      ArduinoOTA.setHostname("esp8266_salon");
-      WiFi.setHostname("esp8266_salon");
-      nazwaHosta="esp8266_salon";
-      port=306;
-      serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Salon";
-    }else if(WiFi.localIP()[3]==29){
-      ArduinoOTA.setHostname("esp8266_jadalnia");
-      WiFi.setHostname("esp8266_jadalnia");
-      nazwaHosta="esp8266_jadalnia";
-      port=307;
-      serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Jadalnia";
-    }else if(WiFi.localIP()[3]==67 || WiFi.localIP()[3]==56 ){
-      ArduinoOTA.setHostname("esp8266_fryzjer");
-      WiFi.setHostname("esp8266_fryzjer");
-      nazwaHosta="esp8266_fryzjer";
-      port=308;
-    }else if(WiFi.localIP()[3]==14){
-      ArduinoOTA.setHostname("esp8266_pompa");
-      WiFi.setHostname("esp8266_pompa");
-      nazwaHosta="esp8266_pompa";
-      port=309;
-      old_controls=LOW;
-      serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Pompa";
-      automatyczny = LOW;
-    }else if(WiFi.localIP()[3]==3){
-      ArduinoOTA.setHostname("esp8266_kwiatki");
-      WiFi.setHostname("esp8266_kwiatki");
-      nazwaHosta="esp8266_kwiatki";
-      port=300;
-      serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kwiatki";
-      old_controls=LOW;
-    }else{
-      port=300;
-    }
+void based_on_ip() {
+  //Wifi Server Startup
+  port=300;
+  if (WiFi.localIP()[3] == 36) {
+    ArduinoOTA.setHostname("esp8266_mateusz");
+    WiFi.setHostname("esp8266_mateusz");
+    nazwaHosta = "esp8266_mateusz";
+    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Mateusz";
+  } else if (WiFi.localIP()[3] == 49) {
+    ArduinoOTA.setHostname("esp8266_lauba");
+    WiFi.setHostname("esp8266_lauba");
+    nazwaHosta = "esp8266_lauba";
+    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Lauba";
+  } else if (WiFi.localIP()[3] == 64) {
+    ArduinoOTA.setHostname("esp8266_kuchnia");
+    WiFi.setHostname("esp8266_kuchnia");
+    nazwaHosta = "esp8266_kuchnia";
+    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
+  } else if (WiFi.localIP()[3] == 70) {
+    ArduinoOTA.setHostname("esp8266_salon");
+    WiFi.setHostname("esp8266_salon");
+    nazwaHosta = "esp8266_salon";
+    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Salon";
+  } else if (WiFi.localIP()[3] == 29) {
+    ArduinoOTA.setHostname("esp8266_jadalnia");
+    WiFi.setHostname("esp8266_jadalnia");
+    nazwaHosta = "esp8266_jadalnia";
+    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Jadalnia";
+  } else if (WiFi.localIP()[3] == 67 || WiFi.localIP()[3] == 56 ) {
+    ArduinoOTA.setHostname("esp8266_fryzjer");
+    WiFi.setHostname("esp8266_fryzjer");
+    nazwaHosta = "esp8266_fryzjer";
+  } else if (WiFi.localIP()[3] == 14) {
+    ArduinoOTA.setHostname("esp8266_pompa");
+    WiFi.setHostname("esp8266_pompa");
+    nazwaHosta = "esp8266_pompa";
+    old_controls = LOW;
+    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Pompa";
+    automatyczny = LOW;
+  } else if (WiFi.localIP()[3] == 3) {
+    ArduinoOTA.setHostname("esp8266_kwiatki");
+    WiFi.setHostname("esp8266_kwiatki");
+    nazwaHosta = "esp8266_kwiatki";
+    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kwiatki";
+    old_controls = LOW;
+  } else {
+    ArduinoOTA.setHostname("esp8266_UNKNOWN");
+    WiFi.setHostname("esp8266_UNKNOWN");
+    nazwaHosta = "esp8266_UNKNOWN";
+    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
+  }
 }
 
 String IpAddress2String(const IPAddress& ipAddress)
 {
-    return String(ipAddress[0]) + String(".") +
-           String(ipAddress[1]) + String(".") +
-           String(ipAddress[2]) + String(".") +
-           String(ipAddress[3]);
+  return String(ipAddress[0]) + String(".") +
+         String(ipAddress[1]) + String(".") +
+         String(ipAddress[2]) + String(".") +
+         String(ipAddress[3]);
 }
 /******************************************SETUP*************************************/
 void setup() {
@@ -180,101 +178,100 @@ void setup() {
   digitalWrite(D2, HIGH);
   digitalWrite(D3, HIGH);
 
- 
+
   // Connect to Wi-Fi
   based_on_ip();
   WiFi.mode(WIFI_STA);//OTA
 
+  wiFiMulti.addAP("Osiek","osiekrulz");
+  wiFiMulti.addAP("pozdrawiam","osiekrulz");
+  wiFiMulti.addAP("pozdrawiam_plus","osiekrulz");
+  WiFi.scanNetworks();
+  
   /* jak fryzjer to tutaj zmienić na stałe ip */
   /* PAMIĘTAĆ */
   Serial.println(WiFi.localIP());
-   
+
   /*WiFi.begin(ssid[0], password);
-  Serial.print("Connection success");
-  Serial.println(ssid[0]);  
-  delay(10000);
+    Serial.print("Connection success");
+    Serial.println(ssid[0]);
+    delay(10000);
   */
   //ssid = {"osiek", "pozdrawiam", "pozdrawiam_plus", "pozdrawiam2"};
-  if(WiFi.localIP()[3] == 36){
-      Serial.println("Mateusz");
-      
-  }else if(WiFi.localIP()[3] == 3){
-      Serial.println("Kwiatki");
-      ssid[1] = "Osiek";
-      ssid[2] = "Osiek_5Ghz";
-      ssid[3] = "pozdrawiam";
-      
-  }else if(WiFi.localIP()[3] == 49){
-      Serial.println("Lauba");
-      ssid[1] = "pozdrawiam2";
-      ssid[2] = "pozdrawiam_plus";
-      ssid[3] = "pozdrawiam";
-      
-  }else if(WiFi.localIP()[3] == 67){
-      Serial.println("Fryzjer");
-      ssid[1] = "pozdrawiam_plus";
-      ssid[2] = "pozdrawiam2";
-      ssid[3] = "pozdrawiam";
-      
-  }else if(WiFi.localIP()[3] == 64){
-      Serial.println("Kuchnia");
-      ssid[1] = "pozdrawiam_plus";
-      ssid[2] = "pozdrawiam2";
-      ssid[3] = "pozdrawiam";
-      
-  }else if(WiFi.localIP()[3] == 70){
-      Serial.println("Salon");
-      ssid[1] = "pozdrawiam2";
-      ssid[2] = "pozdrawiam_plus";
-      ssid[3] = "pozdrawiam";
-      
-  }else if(WiFi.localIP()[3] == 29){
-      Serial.println("Jadalnia");    
-      ssid[1] = "pozdrawiam_plus";
-      ssid[2] = "pozdrawiam2";
-      ssid[3] = "pozdrawiam"; 
-      
-  }else if(WiFi.localIP()[3] == 14){
-      Serial.println("Pompa");
-      ssid[1] = "pozdrawiam2";
-      ssid[2] = "pozdrawiam_plus";
-      ssid[3] = "pozdrawiam";
-      
-  }else{
-      Serial.println(WiFi.localIP());
-      Serial.println("Niezmienione ssidy");
+  if (WiFi.localIP()[3] == 36) {
+    Serial.println("Mateusz");
+
+  } else if (WiFi.localIP()[3] == 3) {
+    Serial.println("Kwiatki");
+    ssid[1] = "Osiek";
+    ssid[2] = "Osiek_5Ghz";
+    ssid[3] = "pozdrawiam";
+
+  } else if (WiFi.localIP()[3] == 49) {
+    Serial.println("Lauba");
+    ssid[1] = "pozdrawiam2";
+    ssid[2] = "pozdrawiam_plus";
+    ssid[3] = "pozdrawiam";
+
+  } else if (WiFi.localIP()[3] == 67) {
+    Serial.println("Fryzjer");
+    ssid[1] = "pozdrawiam_plus";
+    ssid[2] = "pozdrawiam2";
+    ssid[3] = "pozdrawiam";
+
+  } else if (WiFi.localIP()[3] == 64) {
+    Serial.println("Kuchnia");
+    ssid[1] = "pozdrawiam_plus";
+    ssid[2] = "pozdrawiam2";
+    ssid[3] = "pozdrawiam";
+
+  } else if (WiFi.localIP()[3] == 70) {
+    Serial.println("Salon");
+    ssid[1] = "pozdrawiam2";
+    ssid[2] = "pozdrawiam_plus";
+    ssid[3] = "pozdrawiam";
+
+  } else if (WiFi.localIP()[3] == 29) {
+    Serial.println("Jadalnia");
+    ssid[1] = "pozdrawiam_plus";
+    ssid[2] = "pozdrawiam2";
+    ssid[3] = "pozdrawiam";
+
+  } else if (WiFi.localIP()[3] == 14) {
+    Serial.println("Pompa");
+    ssid[1] = "pozdrawiam2";
+    ssid[2] = "pozdrawiam_plus";
+    ssid[3] = "pozdrawiam";
+
+  } else {
+    Serial.println(WiFi.localIP());
+    Serial.println("Niezmienione ssidy");
   }
-  
+
   //
   /*while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
     }*/
-    /*************************************wifi connection **************/
+  /*************************************wifi connection **************/
 
   if (WiFi.status() != WL_CONNECTED) {
-    for(int pa=0;pa<2;pa++){
-      for(int i=0;i<3;i++){
-        Serial.print("Connecting to ");
-        Serial.println(ssid[i]);
-        Serial.print("With password ");
-        Serial.println(password[pa]);
-        WiFi.begin(ssid[i], password[pa]);
-        delay(20000);
-        if (WiFi.status() == WL_CONNECTED){
-          Serial.println("SUCCESS - connected to ...");
-          break;
-        }
-        Serial.print("Failed connecting to ");
-        Serial.println(ssid[i]);
-      }
-      if (WiFi.status() == WL_CONNECTED){
+    for (int i = 0; i < 3; i++) {
+      Serial.print("Connecting to ");
+      Serial.println(ssid[i]);
+      Serial.print("With password ");
+      Serial.println(password);
+      WiFi.begin(ssid[i], password);
+      delay(2000);
+      if (WiFi.status() == WL_CONNECTED) {
         Serial.println("SUCCESS - connected to ...");
         break;
       }
+      Serial.print("Failed connecting to ");
+      Serial.println(ssid[i]);
     }
   }
-  
+
 
   // No authentication by default
   ArduinoOTA.setPassword("home");
@@ -313,12 +310,12 @@ void setup() {
   Serial.println(WiFi.localIP());
   //END OF OTA
 
-  
-   // setting
+
+  // setting
   based_on_ip();
-  
+
   server.begin(port);
-  
+
   Serial.println("Server started");
   // Print the IP address
   Serial.print("Use this URL to connect: ");
@@ -328,13 +325,13 @@ void setup() {
 
   //no-ip ddns
   /*
-  EasyDDNS.service("noip");  
-  EasyDDNS.client("osiek.zapto.org","osiekowski","osiekowski123.NOIP");
-  
-  EasyDDNS.onUpdate([&](const char* oldIP, const char* newIP){
+    EasyDDNS.service("noip");
+    EasyDDNS.client("osiek.zapto.org","osiekowski","osiekowski123.NOIP");
+
+    EasyDDNS.onUpdate([&](const char* oldIP, const char* newIP){
     Serial.print("EasyDDNS - IP Change Detected: ");
     Serial.println(newIP);
-  });
+    });
   */
   // Initialize a NTPClient to get time
   timeClient.begin();
@@ -343,24 +340,24 @@ void setup() {
   // GMT +8 = 28800
   // GMT -1 = -3600
   // GMT 0 = 0
-  
+
   timeClient.setTimeOffset(7200);
 
   timeClient.update();
-      
-  /*
-  time_t epochTime = timeClient.getEpochTime();
-  struct tm *ptm = gmtime ((time_t *)&epochTime);
-  int monthDay = ptm->tm_mday;
-  int currentMonth = ptm->tm_mon + 1;
 
-  if((currentMonth>=4 && currentMonth<=9) 
+  /*
+    time_t epochTime = timeClient.getEpochTime();
+    struct tm *ptm = gmtime ((time_t *)&epochTime);
+    int monthDay = ptm->tm_mday;
+    int currentMonth = ptm->tm_mon + 1;
+
+    if((currentMonth>=4 && currentMonth<=9)
       || (currentMonth==3 && monthDay>=27)
       || (currentMonth==10 && monthDay<30)){
       timeClient.setTimeOffset(7200);
-  }else{
+    }else{
       timeClient.setTimeOffset(3600);
-  }
+    }
   */
   Serial.println("######## KONIEC SETUP ########");
 }
@@ -373,18 +370,18 @@ int SunsetMinuteOffset = 0;
 
 //float szacowany_stopien_otwarcia = 0.0;
 //float szacowany_stopien_otwarcia2 = 0.0;
-bool going_up=LOW;
-bool going_down=LOW;
-bool going_up2=LOW;
-bool going_down2=LOW;
+bool going_up = LOW;
+bool going_down = LOW;
+bool going_up2 = LOW;
+bool going_down2 = LOW;
 
 int openning_level = 1;
-bool na_raz=HIGH;
-int tryb=0;
-int wedlog_godzina_otwarcia=7;
-int wedlog_minuta_otwarcia=00;
-int wedlog_godzina_zamkniecia=19;
-int wedlog_minuta_zamkniecia=00;
+bool na_raz = HIGH;
+int tryb = 0;
+int wedlog_godzina_otwarcia = 7;
+int wedlog_minuta_otwarcia = 00;
+int wedlog_godzina_zamkniecia = 19;
+int wedlog_minuta_zamkniecia = 00;
 
 
 /*definicje var z kodu które są do obsługi*/
@@ -400,13 +397,13 @@ int currentYear;
 String currentDate;
 String singleLogMessage;
 String logMessage[30];
-short logNr=0;
+short logNr = 0;
 String logDEBUG[30];
-short logNrDEBUG=0;
+short logNrDEBUG = 0;
 
 int Sunrise;
 int Sunset;
-    
+
 
 int SunriseHour;
 int SunriseMinute;
@@ -416,24 +413,24 @@ int SunsetMinute;
 float jakaCzescDnia;
 int ileCzasuSlonca;
 
-int request_fulfilled=0;
-      
+int request_fulfilled = 0;
+
 String httpGETRequest(String serverName) {
   WiFiClient client;
   HTTPClient http;
-    
-  // Your IP address with path or Domain name with URL path 
+
+  // Your IP address with path or Domain name with URL path
   http.begin(client, serverName);
-  
+
   // Send HTTP POST request
   int httpResponseCode = http.GET();
-  
-  String payload = "{}"; 
-  
-  if (httpResponseCode>0) {
+
+  String payload = "{}";
+
+  if (httpResponseCode > 0) {
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
-  
+
     payload = http.getString();
   }
   else {
@@ -448,58 +445,54 @@ String httpGETRequest(String serverName) {
 
 void loop() {
   if (debug == 1) Serial.println("######## POCZĄTEK LOOP########");
-  if (debug == 1) delay(2000);
   // aktualizacje przez sieć
   ArduinoOTA.handle();
   // idk
   //MDNS.update();
   // gdy IP się zmieni wyslanie do serwera nowego
   //EasyDDNS.update(10000);
-
+  
+  based_on_ip();
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi Disconnected");
     // setting 8.15
     based_on_ip();
-    for(int pa=0;pa<2;pa++){
-      for(int i=0;i<3;i++){
-        Serial.print("Connecting to ...");
-        Serial.println(ssid[i]);
-        Serial.print("With password ");
-        Serial.println(password[pa]);
-        WiFi.begin(ssid[i], password[pa]);
-        delay(20000);
-        if (WiFi.status() == WL_CONNECTED){
-          Serial.println("SUCCESS - connected to ...");
-          break;
-        }
-        Serial.print("Failed connecting to ");
-        Serial.println(ssid[i]);
-      }
-      if (WiFi.status() == WL_CONNECTED){
+    server.begin(port);
+    
+    for (int i = 0; i < 3; i++) {
+      Serial.print("Connecting to ...");
+      Serial.println(ssid[i]);
+      Serial.print("With password ");
+      Serial.println(password);
+      WiFi.begin(ssid[i], password);
+      delay(20000);
+      if (WiFi.status() == WL_CONNECTED) {
         Serial.println("SUCCESS - connected to ...");
         break;
       }
+      Serial.print("Failed connecting to ");
+      Serial.println(ssid[i]);
     }
-  } 
+  }
   // ############################ POBIERANIE DANYCH Z SERWERA !!! ###################################
-  
-  
-  if ((WiFiMulti.run() == WL_CONNECTED)) {
+
+
+  if ((wiFiMulti.run(connectTimeoutMs) == WL_CONNECTED)) {
     outputsState = httpGETRequest(serverName);
-    if(debug==1){
+    if (debug == 1) {
       Serial.println(serverName);
       Serial.println(outputsState);
     }
-    
+
     JSONVar myObject = JSON.parse(outputsState);
-  
+
     // JSON.typeof(jsonVar) can be used to get the type of the var
     if (JSON.typeof(myObject) == "undefined") {
       Serial.println("Parsing input failed!");
       //return;
     }
 
-    if(debug==1){
+    if (debug == 1) {
       Serial.print("JSON object = ");
       Serial.println(myObject);
       Serial.print("JSON length() = ");
@@ -512,10 +505,10 @@ void loop() {
     }
 
     /*
-    //myObject.keys() can be used to get an array of all the keys in the object
-    JSONVar keys = myObject.keys();
-  
-    for (int iii = 0; iii < keys.length(); iii++) {
+      //myObject.keys() can be used to get an array of all the keys in the object
+      JSONVar keys = myObject.keys();
+
+      for (int iii = 0; iii < keys.length(); iii++) {
       JSONVar value = myObject[keys[iii]];
       Serial.print("GPIO: ");
       Serial.print(keys[iii]);
@@ -523,58 +516,58 @@ void loop() {
       Serial.println(value);
       //pinMode(atoi(keys[iii]), OUTPUT);
       //digitalWrite(atoi(keys[iii]), atoi(value));
-    }
+      }
     */
 
   }
-  
+
   currentMillis = millis();
   /****************************reset_request*******************************/
   /*
-  if(currentMillis - previous20sec >= 20000){
+    if(currentMillis - previous20sec >= 20000){
     previous20sec = currentMillis;
     request = "";
-  }
+    }
   */
-  
+
   ObslugaKlienta();
   // żeby log nie wyleciał za 30
-  if(logNr>=30){
-    logNr=0;
+  if (logNr >= 30) {
+    logNr = 0;
   }
-  if(logNrDEBUG>=30)logNrDEBUG=0;
-  
+  if (logNrDEBUG >= 30)logNrDEBUG = 0;
+
 
   /******************************ms****************************************/
   if (currentMillis - previousMillis >= ms) {
     previousMillis = currentMillis;
-    logNrDEBUG=0;
-    if(WiFi.status() == WL_CONNECTED){
+    logNrDEBUG = 0;
+    if (WiFi.status() == WL_CONNECTED) {
       timeClient.update();
     }
     /*
-    if(going_up==HIGH){
+      if(going_up==HIGH){
       szacowany_stopien_otwarcia += 0.001*(currentMillis-szacowaneOtwieranieMillis)*3.5;
       szacowaneOtwieranieMillis=currentMillis;
-    }else if(going_down==HIGH){
+      }else if(going_down==HIGH){
       szacowany_stopien_otwarcia -= 0.001*(currentMillis-szacowaneOtwieranieMillis)*3.5;
       szacowaneOtwieranieMillis=currentMillis;
-    }  else{
+      }  else{
       szacowaneOtwieranieMillis=currentMillis;
-    }
-    if(going_up2==HIGH){
+      }
+      if(going_up2==HIGH){
       szacowany_stopien_otwarcia2 += 0.001*(currentMillis-szacowaneOtwieranie2Millis)*7;
       szacowaneOtwieranie2Millis=currentMillis;
-    }else if(going_down2==HIGH){
+      }else if(going_down2==HIGH){
       szacowany_stopien_otwarcia2 -= 0.001*(currentMillis-szacowaneOtwieranie2Millis)*7;
       szacowaneOtwieranie2Millis=currentMillis;
-    }else{
-      szacowaneOtwieranie2Millis=currentMillis;    
-    }
-    if(szacowany_stopien_otwarcia>100)szacowany_stopien_otwarcia=100;
-    if(szacowany_stopien_otwarcia2>100)szacowany_stopien_otwarcia2=100;
-    if(szacowany_stopien_otwarcia<0)szacowany_stopien_otwarcia=0;
-    if(szacowany_stopien_otwarcia2<0)szacowany_stopien_otwarcia2=0;
+      }else{
+      szacowaneOtwieranie2Millis=currentMillis;
+      }
+      if(szacowany_stopien_otwarcia>100)szacowany_stopien_otwarcia=100;
+      if(szacowany_stopien_otwarcia2>100)szacowany_stopien_otwarcia2=100;
+      if(szacowany_stopien_otwarcia<0)szacowany_stopien_otwarcia=0;
+      if(szacowany_stopien_otwarcia2<0)szacowany_stopien_otwarcia2=0;
     */
     time_t epochTime = timeClient.getEpochTime();
     currentHour = timeClient.getHours();
@@ -624,7 +617,7 @@ void loop() {
 
     //Print complete date:
     currentDate = String(currentYear) + "-" + String(currentMonth) + "-" + String(monthDay) + " " + String(currentHour) + ":" + String(currentMinute) + ":" + String(currentSecond);
-    if(debug==1){
+    if (debug == 1) {
       Serial.print("Current date: ");
       Serial.println(currentDate);
     }
@@ -633,22 +626,22 @@ void loop() {
     //delay(2000);
     Sunrise  = Gliwice.sunrise(currentYear, currentMonth, monthDay, false);
     Sunset   = Gliwice.sunset(currentYear, currentMonth, monthDay, false);
-    if(tryb==1){
-      Sunrise=wedlog_godzina_otwarcia*60 + wedlog_minuta_otwarcia;
-      Sunset=wedlog_godzina_zamkniecia*60 + wedlog_minuta_zamkniecia;
+    if (tryb == 1) {
+      Sunrise = wedlog_godzina_otwarcia * 60 + wedlog_minuta_otwarcia;
+      Sunset = wedlog_godzina_zamkniecia * 60 + wedlog_minuta_zamkniecia;
     }
-     
-    if((currentMonth>=4 && currentMonth<=9) 
-        || (currentMonth==3 && monthDay>=27)
-        || (currentMonth==10 && monthDay<30)){
+
+    if ((currentMonth >= 4 && currentMonth <= 9)
+        || (currentMonth == 3 && monthDay >= 27)
+        || (currentMonth == 10 && monthDay < 30)) {
       timeClient.setTimeOffset(7200);
-    }else{
-      Sunrise=Sunrise-60;
-      Sunset=Sunset-60;
+    } else {
+      Sunrise = Sunrise - 60;
+      Sunset = Sunset - 60;
       timeClient.setTimeOffset(3600);
     }
-    
-    
+
+
     SunriseHour = Sunrise / 60;
     SunriseMinute = Sunrise % 60;
     SunsetHour = Sunset / 60;
@@ -683,547 +676,547 @@ void loop() {
       Serial.println();
     }
     //delay(2000);
-    
-    //if(sGPIO[0] > 0 || sGPIO[1] > 0 || sGPIO[2] > 0 || sGPIO[3] > 0){  
-      if(debug==1){
-        Serial.println("sGPIO");
-        for(int i=0; i<(sizeof(sGPIO)/sizeof(sGPIO[0]));i++){
-          Serial.print("sGPIO[");
-          Serial.print(i);
-          Serial.print("] = ");
-          Serial.println(sGPIO[i]);
+
+    //if(sGPIO[0] > 0 || sGPIO[1] > 0 || sGPIO[2] > 0 || sGPIO[3] > 0){
+    if (debug == 1) {
+      Serial.println("sGPIO");
+      for (int i = 0; i < (sizeof(sGPIO) / sizeof(sGPIO[0])); i++) {
+        Serial.print("sGPIO[");
+        Serial.print(i);
+        Serial.print("] = ");
+        Serial.println(sGPIO[i]);
+      }
+    }
+    //}
+    if (!old_controls) {
+      if (sGPIO[0])digitalWrite(D0, LOW);
+      if (sGPIO[1])digitalWrite(D0, HIGH);
+      if (sGPIO[2])digitalWrite(D1, LOW);
+      if (sGPIO[3])digitalWrite(D1, HIGH);
+    } else {
+      if (sGPIO[0] && !sGPIO[1])digitalWrite(D0, LOW);
+      if (sGPIO[1] && !sGPIO[0])digitalWrite(D1, LOW);
+      if (sGPIO[2] && !sGPIO[3])digitalWrite(D2, LOW);
+      if (sGPIO[3] && !sGPIO[2])digitalWrite(D3, LOW);
+      if (sGPIO[0] || sGPIO[1] || sGPIO[2] || sGPIO[3]){
+        delay(2000);
+        going_up=LOW;
+        going_up2=LOW;
+        going_down=LOW;
+        going_down2=LOW;
+      }
+      if ( going_up==LOW && going_up2==LOW && going_down==LOW && going_down2==LOW){
+        if (!sGPIO[0])digitalWrite(D0, HIGH);
+        if (!sGPIO[1])digitalWrite(D1, HIGH);
+        if (!sGPIO[2])digitalWrite(D2, HIGH);
+        if (!sGPIO[3])digitalWrite(D3, HIGH);    
+      }
+    }
+    if (ostatniaAktywacja >= 24 * 60) {
+      ostatniaAktywacja = ostatniaAktywacja-24*60;
+    }
+
+    if (old_controls == LOW) {
+      // AKTYWAXJA GDY AUTO
+      logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>ostatniaAktywacja=" + ostatniaAktywacja + "</tr></td>";
+      if (logNrDEBUG >= 30)logNrDEBUG = 0;
+      Serial.print(logDEBUG[logNrDEBUG - 1]);
+      logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "if(ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny )" + "</tr></td>";
+      if (logNrDEBUG >= 30)logNrDEBUG = 0;
+      Serial.print(logDEBUG[logNrDEBUG - 1]);
+      logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "if(" + String(ostatniaAktywacja) + " + 60 < (" + currentHour + " * 60 + " + currentMinute + ") && " + automatyczny + " )" + "</tr></td>";
+      if (logNrDEBUG >= 30)logNrDEBUG = 0;
+      Serial.print(logDEBUG[logNrDEBUG - 1]);
+
+      //if (aktywacja >= warAktywacji && automatyczny ) {
+      if (ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute ) && automatyczny ) {
+
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>TAK aktywacja</tr></td>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.print(logDEBUG[logNrDEBUG - 1]);
+
+        //aktywacja = 0;
+        request = "";
+
+        //otwarcie gdy jasno
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>if (currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset)</tr></td>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.println(logDEBUG[logNrDEBUG - 1]);
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>if (" + currentHour + " * 60 + " + currentMinute + ") >= (" + Sunrise + " + " + SunriseHourOffset + " * 60 + " + SunriseMinuteOffset + ") && (" + currentHour + " * 60 + " + currentMinute + ") < (" + Sunrise + "+60 + " + SunriseHourOffset + " * 60 + " + SunriseMinuteOffset + ")</tr></td>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.println(logDEBUG[logNrDEBUG - 1]);
+
+        // zamknięcie gdy ciemno
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset) && ((currentHour * 60 + currentMinute) < (Sunset+60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) && x_times_down < 5)" + "</tr></td>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.println(logDEBUG[logNrDEBUG - 1]);
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "else if ((" + currentHour + " * 60 + " + currentMinute + ") >= (" + Sunset + " + " + SunsetHourOffset + " * 60 + " + SunsetMinuteOffset + ") && ((" + currentHour + " * 60 + " + currentMinute + ") < (" + Sunset + "+60 + " + SunsetHourOffset + " * 60 + " + SunsetMinuteOffset + ")) && " + x_times_down + " < 5)" + "</tr></td>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.println(logDEBUG[logNrDEBUG - 1]);
+
+        //otwarcie gdy jasno
+        if ((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && ((currentHour * 60 + currentMinute) < (Sunrise + 60 + SunriseHourOffset * 60 + SunriseMinuteOffset))) {
+          ostatniaAktywacja = currentHour * 60 + currentMinute;
+
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>TAK if</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + ostatniaAktywacja + " = " + currentHour + " * 60 + " + currentMinute + ";</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+
+          Serial.print("UP \n");
+          logMessage[logNr++] = "<tr><td>" + currentDate + "</td><td>new_controls Auto UP" + "</td></tr>";
+          delay(2000);
+          digitalWrite(D0, LOW);
+          going_up = HIGH;
+
+          // zamknięcie gdy ciemno
+        } else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunset + 60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) {
+          ostatniaAktywacja = currentHour * 60 + currentMinute;
+
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>TAK else if</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + ostatniaAktywacja + " = " + currentHour + " * 60 + " + currentMinute + ";</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+
+          //zamknięcie gdy ciemno
+          Serial.print("DOWN \n");
+          logMessage[logNr++] += "<tr><td>" + currentDate + "</td><td>new_controls Auto DOWN " + "</td></tr>";
+          delay(2000);
+          digitalWrite(D0, HIGH);
+          going_up = LOW;
         }
       }
-    //}
-    if(!old_controls){
-      if(sGPIO[0])digitalWrite(D0, LOW);
-      delay(50);
-      if(sGPIO[1])digitalWrite(D0, HIGH);
-      delay(50);
-      if(sGPIO[2])digitalWrite(D1, LOW);
-      delay(50);
-      if(sGPIO[3])digitalWrite(D1, HIGH);
-    }else{
-      if(sGPIO[0])digitalWrite(D0, LOW);
-      delay(50);
-      if(sGPIO[1])digitalWrite(D1, LOW);
-      delay(50);
-      if(sGPIO[2])digitalWrite(D2, LOW);
-      delay(50);
-      if(sGPIO[3])digitalWrite(D3, LOW);
-      delay(50);
-      if(!sGPIO[0])digitalWrite(D0, HIGH);
-      delay(50);
-      if(!sGPIO[1])digitalWrite(D1, HIGH);
-      delay(50);
-      if(!sGPIO[2])digitalWrite(D2, HIGH);
-      delay(50);
-      if(!sGPIO[3])digitalWrite(D3, HIGH);
-    }
-    if(ostatniaAktywacja >= 24*60){
-      ostatniaAktywacja=0;
-    }
+      //else {
+      //  aktywacja++;
+      //  if (aktywacja > 15000)aktywacja = 15000;
+      //}
+    } else {
+      // AKTYWAXJA GDY AUTO
+      logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>ostatniaAktywacja=" + ostatniaAktywacja + "</tr></td>";
+      if (logNrDEBUG >= 30)logNrDEBUG = 0;
+      Serial.print(logDEBUG[logNrDEBUG - 1]);
+      logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "if(ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny )" + "</tr></td>";
+      if (logNrDEBUG >= 30)logNrDEBUG = 0;
+      Serial.print(logDEBUG[logNrDEBUG - 1]);
+      logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "if(" + String(ostatniaAktywacja) + " + 60 < (" + currentHour + " * 60 + " + currentMinute + ") && " + automatyczny + " )" + "</tr></td>";
+      if (logNrDEBUG >= 30)logNrDEBUG = 0;
+      Serial.print(logDEBUG[logNrDEBUG - 1]);
 
-    if(old_controls==LOW){
-            // AKTYWAXJA GDY AUTO
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
-            if(logNrDEBUG>=30)logNrDEBUG=0;
-            Serial.print(logDEBUG[logNrDEBUG-1]);
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny )"+"</tr></td>";
-            if(logNrDEBUG>=30)logNrDEBUG=0;
-            Serial.print(logDEBUG[logNrDEBUG-1]);
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" + 60 < ("+currentHour+" * 60 + "+currentMinute+") && "+automatyczny+" )"+"</tr></td>";
-            if(logNrDEBUG>=30)logNrDEBUG=0;
-            Serial.print(logDEBUG[logNrDEBUG-1]);
-            
-            //if (aktywacja >= warAktywacji && automatyczny ) {
-            if (ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute ) && automatyczny ) {
-              
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK aktywacja</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-              Serial.print(logDEBUG[logNrDEBUG-1]);
-              
-              //aktywacja = 0;
-              request = "";
-              
-              //otwarcie gdy jasno
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>if (currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset)</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-              Serial.println(logDEBUG[logNrDEBUG-1]);
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>if ("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunrise+" + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+") && ("+currentHour+" * 60 + "+currentMinute+") < ("+Sunrise+"+60 + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+")</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-              Serial.println(logDEBUG[logNrDEBUG-1]);
-                              
-              // zamknięcie gdy ciemno
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset) && ((currentHour * 60 + currentMinute) < (Sunset+60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) && x_times_down < 5)"+"</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-              Serial.println(logDEBUG[logNrDEBUG-1]);
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"else if (("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunset+" + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+") && (("+currentHour+" * 60 + "+currentMinute+") < ("+Sunset+"+60 + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+")) && "+x_times_down+" < 5)"+"</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-              Serial.println(logDEBUG[logNrDEBUG-1]);
-                
-              //otwarcie gdy jasno
-              if ((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && ((currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset))) {
-                ostatniaAktywacja = currentHour * 60 + currentMinute;
-                
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK if</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+ostatniaAktywacja+" = "+currentHour+" * 60 + "+currentMinute+";</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                
-                Serial.print("UP \n");
-                logMessage[logNr++]="<tr><td>"+currentDate+"</td><td>new_controls Auto UP"+"</td></tr>";
-                delay(2000);
-                digitalWrite(D0, LOW);
-                going_up=HIGH;
-            
-              // zamknięcie gdy ciemno
-              } else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunset+60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) {   
-                ostatniaAktywacja = currentHour * 60 + currentMinute;
-                
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK else if</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+ostatniaAktywacja+" = "+currentHour+" * 60 + "+currentMinute+";</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                
-                //zamknięcie gdy ciemno
-                Serial.print("DOWN \n");
-                logMessage[logNr++]+="<tr><td>"+currentDate+"</td><td>new_controls Auto DOWN "+"</td></tr>";
-                delay(2000);
-                digitalWrite(D0, HIGH);
-                going_up=LOW;
-              }
-            }
-            //else {
-            //  aktywacja++;
-            //  if (aktywacja > 15000)aktywacja = 15000;
-            //}
-    }else{ 
-            // AKTYWAXJA GDY AUTO
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja="+ostatniaAktywacja+"</tr></td>";
-            if(logNrDEBUG>=30)logNrDEBUG=0;
-            Serial.print(logDEBUG[logNrDEBUG-1]);
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if(ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny )"+"</tr></td>";
-            if(logNrDEBUG>=30)logNrDEBUG=0;
-            Serial.print(logDEBUG[logNrDEBUG-1]);
-            logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"if("+String(ostatniaAktywacja)+" + 60 < ("+currentHour+" * 60 + "+currentMinute+") && "+automatyczny+" )"+"</tr></td>";
-            if(logNrDEBUG>=30)logNrDEBUG=0;
-            Serial.print(logDEBUG[logNrDEBUG-1]);
-            
-            // AKTYWAXJA GDY AUTO
-            if (ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny ) {
-              
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK aktywacja</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-              Serial.print(logDEBUG[logNrDEBUG-1]);
-              
-              //aktywacja = 0;
-              request = "";
-              digitalWrite(D0, HIGH);
-              digitalWrite(D1, HIGH);
-              if(WiFi.localIP()[3]==64){
-                digitalWrite(D2, HIGH);
-                digitalWrite(D3, HIGH);
-              }
-               
-              //otwarcie gdy jasno
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>if (currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset)</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-              Serial.println(logDEBUG[logNrDEBUG-1]);
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>if ("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunrise+" + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+") && ("+currentHour+" * 60 + "+currentMinute+") < ("+Sunrise+"+60 + "+SunriseHourOffset+" * 60 + "+SunriseMinuteOffset+")</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-              Serial.println(logDEBUG[logNrDEBUG-1]);
-                              
-              // zamknięcie gdy ciemno
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset) && ((currentHour * 60 + currentMinute) < (Sunset+60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) && x_times_down < 5)"+"</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-              Serial.println(logDEBUG[logNrDEBUG-1]);
-              logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+"else if (("+currentHour+" * 60 + "+currentMinute+") >= ("+Sunset+" + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+") && (("+currentHour+" * 60 + "+currentMinute+") < ("+Sunset+"+60 + "+SunsetHourOffset+" * 60 + "+SunsetMinuteOffset+")) && "+x_times_down+" < 5)"+"</tr></td>";
-              if(logNrDEBUG>=30)logNrDEBUG=0;
-              Serial.println(logDEBUG[logNrDEBUG-1]);
-                
-              if ((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset) && x_times_up < 10) {
-                ostatniaAktywacja = currentHour * 60 + currentMinute;
-                
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK if</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+ostatniaAktywacja+" = "+currentHour+" * 60 + "+currentMinute+";</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                
-                Serial.print("UP \n");
-                logMessage[logNr++]+="<tr><td>"+currentDate+"</td><td>old_controls Auto UP "+"</td></tr>";
-                delay(2000);
-                digitalWrite(D0, LOW);
-                if(na_raz==HIGH){
-                  delay((10*2000)/openning_level);
-                  x_times_up=10;
-                  //szacowany_stopien_otwarcia=100.0/openning_level;
-                }else{
-                  delay(2000/openning_level);
-                  //szacowany_stopien_otwarcia+=20/openning_level;
-                }
-                digitalWrite(D0, HIGH);
-                delay(2000);
-                if(WiFi.localIP()[3]==64){
-                  digitalWrite(D2, LOW);
-                  if(na_raz==HIGH){
-                    delay((10*2000*2)/openning_level);
-                    x_times_up=10;
-                    //szacowany_stopien_otwarcia2=100.0/openning_level;
-                  }else{
-                    delay((2000*2)/openning_level);
-                    //szacowany_stopien_otwarcia2+=20/openning_level;
-                  }
-                  digitalWrite(D2, HIGH);
-                  delay(2000);
-                } 
-                x_times_up++;
-                x_times_down = 0;
-              // zamknięcie gdy ciemno
-              } else if (((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset)) && ((currentHour * 60 + currentMinute) < (Sunset+60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) && x_times_down < 5) {
-                ostatniaAktywacja = currentHour * 60 + currentMinute;
+      // AKTYWAXJA GDY AUTO
+      if (ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny ) {
 
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>TAK else if</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                logDEBUG[logNrDEBUG++]="<tr><td>"+currentDate+"</td><td>"+ostatniaAktywacja+" = "+currentHour+" * 60 + "+currentMinute+";</tr></td>";
-                if(logNrDEBUG>=30)logNrDEBUG=0;
-                Serial.println(logDEBUG[logNrDEBUG-1]);
-                
-                Serial.print("DOWN \n");
-                logMessage[logNr++]+="<tr><td>"+currentDate+"</td><td>old_controls Auto DOWN"+"</td></tr>";
-                delay(2000);
-                digitalWrite(D1, LOW);
-                if(na_raz==HIGH){
-                  delay((5*4000)/openning_level/openning_level);
-                  x_times_down=5;
-                  //szacowany_stopien_otwarcia=0.0;
-                }else{
-                  delay(4000/openning_level);
-                  //szacowany_stopien_otwarcia-=20/openning_level;
-                }
-                digitalWrite(D1, HIGH);
-                delay(2000);
-                if(WiFi.localIP()[3]==64){
-                  digitalWrite(D3, LOW);
-                  if(na_raz==HIGH){
-                    delay((5*4000*2)/openning_level);
-                    x_times_down=5;
-                    //szacowany_stopien_otwarcia2=0.0;
-                  }else{
-                    delay((4000*2)/openning_level);
-                    //szacowany_stopien_otwarcia2-=20/openning_level;
-                  }
-                  digitalWrite(D3, HIGH);
-                  delay(2000);
-                } 
-                x_times_down++;
-                x_times_up = 0;
-              }
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>TAK aktywacja</tr></td>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.print(logDEBUG[logNrDEBUG - 1]);
+
+        //aktywacja = 0;
+        request = "";
+        /* SKOKI
+        digitalWrite(D0, HIGH);
+        digitalWrite(D1, HIGH);
+        if (WiFi.localIP()[3] == 64) {
+          digitalWrite(D2, HIGH);
+          digitalWrite(D3, HIGH);
+        }
+        */
+        //otwarcie gdy jasno
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>if (currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise+60 + SunriseHourOffset * 60 + SunriseMinuteOffset)</tr></td>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.println(logDEBUG[logNrDEBUG - 1]);
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>if (" + currentHour + " * 60 + " + currentMinute + ") >= (" + Sunrise + " + " + SunriseHourOffset + " * 60 + " + SunriseMinuteOffset + ") && (" + currentHour + " * 60 + " + currentMinute + ") < (" + Sunrise + "+60 + " + SunriseHourOffset + " * 60 + " + SunriseMinuteOffset + ")</tr></td>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.println(logDEBUG[logNrDEBUG - 1]);
+
+        // zamknięcie gdy ciemno
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "else if ((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset) && ((currentHour * 60 + currentMinute) < (Sunset+60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) && x_times_down < 5)" + "</tr></td>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.println(logDEBUG[logNrDEBUG - 1]);
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "else if ((" + currentHour + " * 60 + " + currentMinute + ") >= (" + Sunset + " + " + SunsetHourOffset + " * 60 + " + SunsetMinuteOffset + ") && ((" + currentHour + " * 60 + " + currentMinute + ") < (" + Sunset + "+60 + " + SunsetHourOffset + " * 60 + " + SunsetMinuteOffset + ")) && " + x_times_down + " < 5)" + "</tr></td>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.println(logDEBUG[logNrDEBUG - 1]);
+
+        if ((currentHour * 60 + currentMinute) >= (Sunrise + SunriseHourOffset * 60 + SunriseMinuteOffset) && (currentHour * 60 + currentMinute) < (Sunrise + 60 + SunriseHourOffset * 60 + SunriseMinuteOffset) && x_times_up < 10) {
+          ostatniaAktywacja = currentHour * 60 + currentMinute;
+
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>TAK if</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + ostatniaAktywacja + " = " + currentHour + " * 60 + " + currentMinute + ";</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+
+          Serial.print("UP \n");
+          logMessage[logNr++] += "<tr><td>" + currentDate + "</td><td>old_controls Auto UP " + "</td></tr>";
+          delay(2000);
+          digitalWrite(D0, LOW);
+          if (na_raz == HIGH) {
+            delay((10 * 2000) / openning_level);
+            x_times_up = 10;
+            //szacowany_stopien_otwarcia=100.0/openning_level;
+          } else {
+            delay(2000 / openning_level);
+            //szacowany_stopien_otwarcia+=20/openning_level;
+          }
+          digitalWrite(D0, HIGH);
+          delay(2000);
+          if (WiFi.localIP()[3] == 64) {
+            digitalWrite(D2, LOW);
+            if (na_raz == HIGH) {
+              delay((10 * 2000 * 2) / openning_level);
+              x_times_up = 10;
+              //szacowany_stopien_otwarcia2=100.0/openning_level;
+            } else {
+              delay((2000 * 2) / openning_level);
+              //szacowany_stopien_otwarcia2+=20/openning_level;
             }
-            //else {
-            //  aktywacja++;
-            //  if (aktywacja > 15000)aktywacja = 15000;
-            //}
+            digitalWrite(D2, HIGH);
+            delay(2000);
+          }
+          x_times_up++;
+          x_times_down = 0;
+          // zamknięcie gdy ciemno
+        } else if (((currentHour * 60 + currentMinute) >= (Sunset + SunsetHourOffset * 60 + SunsetMinuteOffset)) && ((currentHour * 60 + currentMinute) < (Sunset + 60 + SunsetHourOffset * 60 + SunsetMinuteOffset)) && x_times_down < 5) {
+          ostatniaAktywacja = currentHour * 60 + currentMinute;
+
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>TAK else if</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>ostatniaAktywacja = currentHour * 60 + currentMinute;</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + ostatniaAktywacja + " = " + currentHour + " * 60 + " + currentMinute + ";</tr></td>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+
+          Serial.print("DOWN \n");
+          logMessage[logNr++] += "<tr><td>" + currentDate + "</td><td>old_controls Auto DOWN" + "</td></tr>";
+          delay(2000);
+          digitalWrite(D1, LOW);
+          if (na_raz == HIGH) {
+            delay((5 * 4000) / openning_level / openning_level);
+            x_times_down = 5;
+            //szacowany_stopien_otwarcia=0.0;
+          } else {
+            delay(4000 / openning_level);
+            //szacowany_stopien_otwarcia-=20/openning_level;
+          }
+          digitalWrite(D1, HIGH);
+          delay(2000);
+          if (WiFi.localIP()[3] == 64) {
+            digitalWrite(D3, LOW);
+            if (na_raz == HIGH) {
+              delay((5 * 4000 * 2) / openning_level);
+              x_times_down = 5;
+              //szacowany_stopien_otwarcia2=0.0;
+            } else {
+              delay((4000 * 2) / openning_level);
+              //szacowany_stopien_otwarcia2-=20/openning_level;
+            }
+            digitalWrite(D3, HIGH);
+            delay(2000);
+          }
+          x_times_down++;
+          x_times_up = 0;
+        }
+      }
+      //else {
+      //  aktywacja++;
+      //  if (aktywacja > 15000)aktywacja = 15000;
+      //}
     }
   }
 }
 
-bool ObslugaKlienta(){
-    // SERVER WIFI
-    WiFiClient client = server.available();
-    if (client) {
-      //while(!client.available()){
-      // Check if a client has connected
-      //   delay(1);
-      //  }
-      request = client.readStringUntil('\r');
-      if(debug==1){
-        Serial.println("request");
-        Serial.println(request);
-      }
+bool ObslugaKlienta() {
+  // SERVER WIFI
+  WiFiClient client = server.available();
+  if (client) {
+    //while(!client.available()){
+    // Check if a client has connected
+    //   delay(1);
+    //  }
+    request = client.readStringUntil('\r');
+    if (debug == 1) {
+      Serial.println("request");
+      Serial.println(request);
+    }
 
-      singleLogMessage="";
-      if (request.indexOf("/LED=ON") != -1) {
-        Serial.println("ON");
-        automatyczny = HIGH;
-        request_fulfilled=1;
-      }else if (request.indexOf("/LED=OFF") != -1) {
-        Serial.println("OFF");
-        automatyczny = LOW;
-        request_fulfilled=1;
-      }else if (request.indexOf("/WIFI_CONTROL=UP") != -1) {
-        Serial.print("UP \n");
-        digitalWrite(D0, LOW);
-        digitalWrite(D1, HIGH);
-        going_up=HIGH;
-        request_fulfilled=1;
-        singleLogMessage="Wywołano UP";
-      }else if (request.indexOf("/WIFI_CONTROL=DOWN") != -1) {
-        Serial.print("DOWN \n");
-        digitalWrite(D1, LOW);
-        digitalWrite(D0, HIGH);
-        going_down=HIGH;
-        request_fulfilled=1;
-        singleLogMessage="Wywołano DOWN";
-      }else if (request.indexOf("/WIFI_CONTROL=STOP") != -1) {
-        Serial.print("STOP \n");
-        digitalWrite(D0, HIGH);
-        digitalWrite(D1, HIGH);
-        going_up=LOW;
-        going_down=LOW;
-        request_fulfilled=1;
-        singleLogMessage="Wywołano STOP";
-      }else if (request.indexOf("/WIFI_CONTROL2=UP") != -1) {
-        Serial.print("UP2 \n");
-        digitalWrite(D2, LOW);
-        digitalWrite(D3, HIGH);
-        going_up2=HIGH;
-        request_fulfilled=1;
-        singleLogMessage="Wywołano UP 2";
-      }else if (request.indexOf("/WIFI_CONTROL2=DOWN") != -1) {
-        Serial.print("DOWN2 \n");
-        digitalWrite(D3, LOW);
-        digitalWrite(D2, HIGH);
-        going_down2=HIGH;
-        request_fulfilled=1;
-        singleLogMessage="Wywołano DOWN 2";
-      }else if (request.indexOf("/WIFI_CONTROL2=STOP") != -1) {
-        Serial.print("STOP2 \n");
-        digitalWrite(D2, HIGH);
-        digitalWrite(D3, HIGH);
-        going_up2=LOW;
-        going_down2=LOW;
-        request_fulfilled=1;
-        singleLogMessage="Wywołano STOP 2";
-      }else if (request.indexOf("TRYB=wschodzachod") != -1){
-        tryb = 0;
-        request_fulfilled=1;
-      }else if (request.indexOf("TRYB=godziny") != -1){
-        tryb = 1;
-        request_fulfilled=1;
-      }else if (request.indexOf("openning_LEVEL=1") != -1){
-        openning_level = 1;
-        request_fulfilled=1;
-      }else if (request.indexOf("openning_LEVEL=2") != -1){
-        openning_level = 2;
-        request_fulfilled=1;
-      }else if (request.indexOf("openning_LEVEL=3") != -1){
-        openning_level = 3;
-        request_fulfilled=1;
-      }else if (request.indexOf("openning_LEVEL=4") != -1){
-        openning_level = 4;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN=4") != -1){
-        wedlog_godzina_otwarcia = 4;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN=5") != -1){
-        wedlog_godzina_otwarcia = 5;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN=6") != -1){
-        wedlog_godzina_otwarcia = 6;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN=7") != -1){
-        wedlog_godzina_otwarcia = 7;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN=8") != -1){
-        wedlog_godzina_otwarcia = 8;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN=9") != -1){
-        wedlog_godzina_otwarcia = 9;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN=10") != -1){
-        wedlog_godzina_otwarcia = 10;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN=11") != -1){
-        wedlog_godzina_otwarcia = 11;
-        request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_OPEN=12") != -1){
-        wedlog_godzina_otwarcia = 12;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN_MIN=0") != -1){
-        wedlog_minuta_otwarcia = 0;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN_MIN=15") != -1){
-        wedlog_minuta_otwarcia = 15;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN_MIN=30") != -1){
-        wedlog_minuta_otwarcia = 30;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_OPEN_MIN=45") != -1){
-        wedlog_minuta_otwarcia = 45;  
-        request_fulfilled=1;
-      }
-      else if (request.indexOf("/SET_TIME_CLOSE=14") != -1){
-        wedlog_godzina_zamkniecia = 14;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE=15") != -1){
-        wedlog_godzina_zamkniecia = 15;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE=16") != -1){
-        wedlog_godzina_zamkniecia = 16;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE=17") != -1){
-        wedlog_godzina_zamkniecia = 17;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE=18") != -1){
-        wedlog_godzina_zamkniecia = 18;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE=19") != -1){
-        wedlog_godzina_zamkniecia = 19;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE=20") != -1){
-        wedlog_godzina_zamkniecia = 20;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE=21") != -1){
-        wedlog_godzina_zamkniecia = 21;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE=22") != -1){
-        wedlog_godzina_zamkniecia = 22;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE=23") != -1){
-        wedlog_godzina_zamkniecia = 23;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE_MIN=0") != -1){
-        wedlog_minuta_zamkniecia = 0;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE_MIN=15") != -1){
-        wedlog_minuta_zamkniecia = 15;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE_MIN=30") != -1){
-        wedlog_minuta_zamkniecia = 30;
-        request_fulfilled=1;
-      }else if (request.indexOf("/SET_TIME_CLOSE_MIN=45") != -1){
-        wedlog_minuta_zamkniecia = 45;
-        request_fulfilled=1;
-      }
-      else if (request.indexOf("/OFFSET_SUNRISE_H=-2") != -1){
-        SunriseHourOffset = -2;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNRISE_H=-1") != -1){
-        SunriseHourOffset = -1;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNRISE_H=0") != -1){
-        SunriseHourOffset = 0;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNRISE_H=1") != -1){
-        SunriseHourOffset = 1;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNRISE_H=2") != -1){
-        SunriseHourOffset = 2;
-        request_fulfilled=1;
-      }
-      else if (request.indexOf("/OFFSET_SUNSET_H=-2") != -1){
-        SunsetHourOffset = -2;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNSET_H=-1") != -1){
-        SunsetHourOffset = -1;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNSET_H=0") != -1){
-        SunsetHourOffset = 0;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNSET_H=1") != -1){
-        SunsetHourOffset = 1;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNSET_H=2") != -1){
-        SunsetHourOffset = 2;
-        request_fulfilled=1;
-      }
-      else if (request.indexOf("/OFFSET_SUNRISE_M=-45") != -1){
-        SunriseMinuteOffset = -45;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNRISE_M=-30") != -1){
-        SunriseMinuteOffset = -30;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNRISE_M=-15") != -1){
-        SunriseMinuteOffset = -15;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNRISE_M=0") != -1){
-        SunriseMinuteOffset = 0;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNRISE_M=15") != -1){
-        SunriseMinuteOffset = 15;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNRISE_M=30") != -1){
-        SunriseMinuteOffset = 30;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNRISE_M=45") != -1){
-        SunriseMinuteOffset = 45;
-        request_fulfilled=1;
-      }
-      else if (request.indexOf("/OFFSET_SUNSET_M=-45") != -1){
-        SunsetMinuteOffset = -45;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNSET_M=-35") != -1){
-        SunsetMinuteOffset = -30;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNSET_M=-15") != -1){
-        SunsetMinuteOffset = -15;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNSET_M=0") != -1){
-        SunsetMinuteOffset = 0;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNSET_M=15") != -1){
-        SunsetMinuteOffset = 15;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNSET_M=30") != -1){
-        SunsetMinuteOffset = 30;
-        request_fulfilled=1;
-      }else if (request.indexOf("/OFFSET_SUNSET_M=45") != -1){
-        SunsetMinuteOffset = 45;
-        request_fulfilled=1;
-      }
-      
-      if(singleLogMessage!="")logMessage[logNr++]="<tr><td>"+currentDate+"</td><td>"+singleLogMessage+"</td></tr>";
-      
-      client.flush();
+    singleLogMessage = "";
+    if (request.indexOf("/LED=ON") != -1) {
+      Serial.println("ON");
+      automatyczny = HIGH;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/LED=OFF") != -1) {
+      Serial.println("OFF");
+      automatyczny = LOW;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/WIFI_CONTROL=UP") != -1) {
+      Serial.print("UP \n");
+      digitalWrite(D0, LOW);
+      digitalWrite(D1, HIGH);
+      going_up = HIGH;
+      request_fulfilled = 1;
+      singleLogMessage = "Wywołano UP";
+    } else if (request.indexOf("/WIFI_CONTROL=DOWN") != -1) {
+      Serial.print("DOWN \n");
+      digitalWrite(D1, LOW);
+      digitalWrite(D0, HIGH);
+      going_down = HIGH;
+      request_fulfilled = 1;
+      singleLogMessage = "Wywołano DOWN";
+    } else if (request.indexOf("/WIFI_CONTROL=STOP") != -1) {
+      Serial.print("STOP \n");
+      digitalWrite(D0, HIGH);
+      digitalWrite(D1, HIGH);
+      going_up = LOW;
+      going_down = LOW;
+      request_fulfilled = 1;
+      singleLogMessage = "Wywołano STOP";
+    } else if (request.indexOf("/WIFI_CONTROL2=UP") != -1) {
+      Serial.print("UP2 \n");
+      digitalWrite(D2, LOW);
+      digitalWrite(D3, HIGH);
+      going_up2 = HIGH;
+      request_fulfilled = 1;
+      singleLogMessage = "Wywołano UP 2";
+    } else if (request.indexOf("/WIFI_CONTROL2=DOWN") != -1) {
+      Serial.print("DOWN2 \n");
+      digitalWrite(D3, LOW);
+      digitalWrite(D2, HIGH);
+      going_down2 = HIGH;
+      request_fulfilled = 1;
+      singleLogMessage = "Wywołano DOWN 2";
+    } else if (request.indexOf("/WIFI_CONTROL2=STOP") != -1) {
+      Serial.print("STOP2 \n");
+      digitalWrite(D2, HIGH);
+      digitalWrite(D3, HIGH);
+      going_up2 = LOW;
+      going_down2 = LOW;
+      request_fulfilled = 1;
+      singleLogMessage = "Wywołano STOP 2";
+    } else if (request.indexOf("TRYB=wschodzachod") != -1) {
+      tryb = 0;
+      request_fulfilled = 1;
+    } else if (request.indexOf("TRYB=godziny") != -1) {
+      tryb = 1;
+      request_fulfilled = 1;
+    } else if (request.indexOf("openning_LEVEL=1") != -1) {
+      openning_level = 1;
+      request_fulfilled = 1;
+    } else if (request.indexOf("openning_LEVEL=2") != -1) {
+      openning_level = 2;
+      request_fulfilled = 1;
+    } else if (request.indexOf("openning_LEVEL=3") != -1) {
+      openning_level = 3;
+      request_fulfilled = 1;
+    } else if (request.indexOf("openning_LEVEL=4") != -1) {
+      openning_level = 4;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN=4") != -1) {
+      wedlog_godzina_otwarcia = 4;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN=5") != -1) {
+      wedlog_godzina_otwarcia = 5;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN=6") != -1) {
+      wedlog_godzina_otwarcia = 6;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN=7") != -1) {
+      wedlog_godzina_otwarcia = 7;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN=8") != -1) {
+      wedlog_godzina_otwarcia = 8;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN=9") != -1) {
+      wedlog_godzina_otwarcia = 9;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN=10") != -1) {
+      wedlog_godzina_otwarcia = 10;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN=11") != -1) {
+      wedlog_godzina_otwarcia = 11;
+      request_fulfilled = 1;
+    }
+    else if (request.indexOf("/SET_TIME_OPEN=12") != -1) {
+      wedlog_godzina_otwarcia = 12;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN_MIN=0") != -1) {
+      wedlog_minuta_otwarcia = 0;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN_MIN=15") != -1) {
+      wedlog_minuta_otwarcia = 15;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN_MIN=30") != -1) {
+      wedlog_minuta_otwarcia = 30;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_OPEN_MIN=45") != -1) {
+      wedlog_minuta_otwarcia = 45;
+      request_fulfilled = 1;
+    }
+    else if (request.indexOf("/SET_TIME_CLOSE=14") != -1) {
+      wedlog_godzina_zamkniecia = 14;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE=15") != -1) {
+      wedlog_godzina_zamkniecia = 15;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE=16") != -1) {
+      wedlog_godzina_zamkniecia = 16;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE=17") != -1) {
+      wedlog_godzina_zamkniecia = 17;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE=18") != -1) {
+      wedlog_godzina_zamkniecia = 18;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE=19") != -1) {
+      wedlog_godzina_zamkniecia = 19;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE=20") != -1) {
+      wedlog_godzina_zamkniecia = 20;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE=21") != -1) {
+      wedlog_godzina_zamkniecia = 21;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE=22") != -1) {
+      wedlog_godzina_zamkniecia = 22;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE=23") != -1) {
+      wedlog_godzina_zamkniecia = 23;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE_MIN=0") != -1) {
+      wedlog_minuta_zamkniecia = 0;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE_MIN=15") != -1) {
+      wedlog_minuta_zamkniecia = 15;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE_MIN=30") != -1) {
+      wedlog_minuta_zamkniecia = 30;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/SET_TIME_CLOSE_MIN=45") != -1) {
+      wedlog_minuta_zamkniecia = 45;
+      request_fulfilled = 1;
+    }
+    else if (request.indexOf("/OFFSET_SUNRISE_H=-2") != -1) {
+      SunriseHourOffset = -2;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNRISE_H=-1") != -1) {
+      SunriseHourOffset = -1;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNRISE_H=0") != -1) {
+      SunriseHourOffset = 0;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNRISE_H=1") != -1) {
+      SunriseHourOffset = 1;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNRISE_H=2") != -1) {
+      SunriseHourOffset = 2;
+      request_fulfilled = 1;
+    }
+    else if (request.indexOf("/OFFSET_SUNSET_H=-2") != -1) {
+      SunsetHourOffset = -2;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNSET_H=-1") != -1) {
+      SunsetHourOffset = -1;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNSET_H=0") != -1) {
+      SunsetHourOffset = 0;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNSET_H=1") != -1) {
+      SunsetHourOffset = 1;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNSET_H=2") != -1) {
+      SunsetHourOffset = 2;
+      request_fulfilled = 1;
+    }
+    else if (request.indexOf("/OFFSET_SUNRISE_M=-45") != -1) {
+      SunriseMinuteOffset = -45;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNRISE_M=-30") != -1) {
+      SunriseMinuteOffset = -30;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNRISE_M=-15") != -1) {
+      SunriseMinuteOffset = -15;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNRISE_M=0") != -1) {
+      SunriseMinuteOffset = 0;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNRISE_M=15") != -1) {
+      SunriseMinuteOffset = 15;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNRISE_M=30") != -1) {
+      SunriseMinuteOffset = 30;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNRISE_M=45") != -1) {
+      SunriseMinuteOffset = 45;
+      request_fulfilled = 1;
+    }
+    else if (request.indexOf("/OFFSET_SUNSET_M=-45") != -1) {
+      SunsetMinuteOffset = -45;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNSET_M=-35") != -1) {
+      SunsetMinuteOffset = -30;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNSET_M=-15") != -1) {
+      SunsetMinuteOffset = -15;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNSET_M=0") != -1) {
+      SunsetMinuteOffset = 0;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNSET_M=15") != -1) {
+      SunsetMinuteOffset = 15;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNSET_M=30") != -1) {
+      SunsetMinuteOffset = 30;
+      request_fulfilled = 1;
+    } else if (request.indexOf("/OFFSET_SUNSET_M=45") != -1) {
+      SunsetMinuteOffset = 45;
+      request_fulfilled = 1;
+    }
 
-      // Return the response
-      client.println("HTTP/1.1 200 OK");
-      client.println("Content-Type: text/html");
-      client.println(""); //  do not forget this one
-      client.println("<!DOCTYPE HTML>");
-      client.println("<html><head><title>ESP8266_n1</title><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1'>");
-      client.println("<link rel='stylesheet' href='https://www.w3schools.com/w3css/4/w3.css'>");
-      client.println("<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Roboto'>");
-      client.println("<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>");
-      client.println("<style>html,body,h1,h2,h3,h4,h5,h6 {font-family: 'Roboto', sans-serif}*{text-decoration:none;} .w3-teal{padding:10px;}");
-      client.println(".topnav {overflow: hidden;background-color: #333;}.topnav a {float: left;color: #f2f2f2;text-align: center;padding: 14px 16px;text-decoration: none;font-size: 17px;}.topnav a:hover {background-color: #ddd;color: black;}.topnav a.active {background-color: #009688;color: white;}");
-      client.println(".dropdown {position: relative;display: inline-block;}");
-      client.println(".dropdown-content {display: none;position: absolute;background-color: #f9f9f9;min-width: 160px;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);padding: 12px 16px;z-index: 1;}.dropdown:hover .dropdown-content {display: block;}");
-      client.println(".dropdown>* {margin: 0}");
-      client.println(".dropdown>p {padding:10px; border:2px #009688 solid;border-radius:4px;}");
-      client.println(".dropdown>ul {padding:10px; border:2px #009688 solid;border-radius:4px;}");
-      client.println("hr {margin: 10px 0}");
-      client.println("table, th, td {border: 1px solid black;border-collapse: collapse;}");
-      client.println("</style>");
-      if (request_fulfilled==1){
-        request="";
-        client.println("<meta http-equiv='refresh' content='0;URL=/'osiek.zapto.org:");
-        client.print(port);
-        client.print("/'' /> ");
-        client.println("</head>");
-        request_fulfilled=0;
-      }else{
+    if (singleLogMessage != "")logMessage[logNr++] = "<tr><td>" + currentDate + "</td><td>" + singleLogMessage + "</td></tr>";
+
+    client.flush();
+
+    // Return the response
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-Type: text/html");
+    client.println(""); //  do not forget this one
+    client.println("<!DOCTYPE HTML>");
+    client.println("<html><head><title>ESP8266_n1</title><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1'>");
+    client.println("<link rel='stylesheet' href='https://www.w3schools.com/w3css/4/w3.css'>");
+    client.println("<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Roboto'>");
+    client.println("<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>");
+    client.println("<style>html,body,h1,h2,h3,h4,h5,h6 {font-family: 'Roboto', sans-serif}*{text-decoration:none;} .w3-teal{padding:10px;}");
+    client.println(".topnav {overflow: hidden;background-color: #333;}.topnav a {float: left;color: #f2f2f2;text-align: center;padding: 14px 16px;text-decoration: none;font-size: 17px;}.topnav a:hover {background-color: #ddd;color: black;}.topnav a.active {background-color: #009688;color: white;}");
+    client.println(".dropdown {position: relative;display: inline-block;}");
+    client.println(".dropdown-content {display: none;position: absolute;background-color: #f9f9f9;min-width: 160px;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);padding: 12px 16px;z-index: 1;}.dropdown:hover .dropdown-content {display: block;}");
+    client.println(".dropdown>* {margin: 0}");
+    client.println(".dropdown>p {padding:10px; border:2px #009688 solid;border-radius:4px;}");
+    client.println(".dropdown>ul {padding:10px; border:2px #009688 solid;border-radius:4px;}");
+    client.println("hr {margin: 10px 0}");
+    client.println("table, th, td {border: 1px solid black;border-collapse: collapse;}");
+    client.println("</style>");
+    if (request_fulfilled == 1) {
+      request = "";
+      client.println("<meta http-equiv='refresh' content='0;URL=/'osiek.zapto.org:");
+      client.print(port);
+      client.print("/'' /> ");
+      client.println("</head>");
+      request_fulfilled = 0;
+    } else {
       client.println("</head>");
       client.println("<body class='w3-light-grey'>");
       client.println("<!-- Page Container -->");
@@ -1234,76 +1227,76 @@ bool ObslugaKlienta(){
       client.println("    <div class='w3-twothird'>");
       client.println("<div class='topnav'>");
       /*
-      if(WiFi.localIP()[3] == 36){
+        if(WiFi.localIP()[3] == 36){
           client.println("<a class='active' href=\"http://osiek.zapto.org:302/\">Mateusz</a>");
         }else{
           client.println("<a href=\"http://osiek.zapto.org:302/\">Mateusz</a>");
         }
-      if(WiFi.localIP()[3] == 49){
+        if(WiFi.localIP()[3] == 49){
           client.println("<a class='active' href=\"http://osiek.zapto.org:303/\">Lauba</a>");
         }else{
           client.println("<a href=\"http://osiek.zapto.org:303/\">Lauba</a>");
         }
-      if(WiFi.localIP()[3] == 67){
+        if(WiFi.localIP()[3] == 67){
           client.println("<a class='active' href=\"http://osiek.zapto.org:308/\">Fryzjer</a>");
         }else{
           client.println("<a href=\"http://osiek.zapto.org:308/\">Fryzjer</a>");
         }
-      if(WiFi.localIP()[3] == 64){
+        if(WiFi.localIP()[3] == 64){
           client.println("<a class='active' href=\"http://osiek.zapto.org:305/\">Kuchnia</a>");
         }else{
           client.println("<a href=\"http://osiek.zapto.org:305/\">Kuchnia</a>");
-        }      
-      if(WiFi.localIP()[3] == 70){
+        }
+        if(WiFi.localIP()[3] == 70){
           client.println("<a class='active' href=\"http://osiek.zapto.org:306/\">Salon</a>");
         }else{
           client.println("<a href=\"http://osiek.zapto.org:306/\">Salon</a>");
         }
-      if(WiFi.localIP()[3] == 29){
+        if(WiFi.localIP()[3] == 29){
           client.println("<a class='active' href=\"http://osiek.zapto.org:307/\">Jadalnia</a>");
         }else{
           client.println("<a href=\"http://osiek.zapto.org:307/\">Jadalnia</a>");
         }
-      if(WiFi.localIP()[3] == 14){
+        if(WiFi.localIP()[3] == 14){
           client.println("<a class='active' href=\"http://osiek.zapto.org:309/\">Pompa</a>");
         }else{
           client.println("<a href=\"http://osiek.zapto.org:309/\">Pompa</a>");
-        }      
-      if(WiFi.localIP()[3] == 3){
+        }
+        if(WiFi.localIP()[3] == 3){
           client.println("<a class='active' href=\"http://mdziezok.ddns.net:300/\">Kwiatki</a>");
         }else{
           client.println("<a href=\"http://mdziezok.ddns.net:300/\">Kwiatki</a>");
         }
       */
-      client.println("<a href=\"http://192.168.1.36:302\">Mateusz</a>");
-      client.println("<a href=\"http://192.168.1.49:303\">Lauba</a>");
-      client.println("<a href=\"http://192.168.1.67:308\">Fryzjer</a>");
-      client.println("<a href=\"http://192.168.1.64:305\">Kuchnia</a>");
-      client.println("<a href=\"http://192.168.1.70:306\">Salon</a>");
-      client.println("<a href=\"http://192.168.1.29:307\">Jadalnia</a>");
-      client.println("<a href=\"http://192.168.1.14:309\">Pompa</a>");
+      client.println("<a href=\"http://192.168.1.36:300\">Mateusz</a>");
+      client.println("<a href=\"http://192.168.1.49:300\">Lauba</a>");
+      client.println("<a href=\"http://192.168.1.67:300\">Fryzjer</a>");
+      client.println("<a href=\"http://192.168.1.64:300\">Kuchnia</a>");
+      client.println("<a href=\"http://192.168.1.70:300\">Salon</a>");
+      client.println("<a href=\"http://192.168.1.29:300\">Jadalnia</a>");
+      client.println("<a href=\"http://192.168.1.14:300\">Pompa</a>");
       client.println("<a href=\"http://mdziezok.ddns.net:300\">Kwiatki</a>");
       client.println("</div>");
       client.println("      <div class='w3-container w3-card w3-white'>");
       client.println("        <h2 class='w3-text-grey w3-padding-16'><i class='fa fa-certificate fa-fw w3-margin-right w3-xxlarge w3-text-teal'></i>");
-      if(WiFi.localIP()[3] == 36){
-          client.println("Mateusz");
-      }else if(WiFi.localIP()[3] == 49){
-          client.println("Lauba");
-      }else if(WiFi.localIP()[3] == 67){
-          client.println("Fryzjer");
-      }else if(WiFi.localIP()[3] == 64){
-          client.println("Kuchnia");
-      }else if(WiFi.localIP()[3] == 70){
-          client.println("Salon");
-      }else if(WiFi.localIP()[3] == 29){
-          client.println("Jadalnia");     
-      }else if(WiFi.localIP()[3] == 14){
-          client.println("Pompa");
-      }else if(WiFi.localIP()[3] == 3){
-          client.println("Kwiatki");
-      }else{
-          client.println(WiFi.localIP());
+      if (WiFi.localIP()[3] == 36) {
+        client.println("Mateusz");
+      } else if (WiFi.localIP()[3] == 49) {
+        client.println("Lauba");
+      } else if (WiFi.localIP()[3] == 67) {
+        client.println("Fryzjer");
+      } else if (WiFi.localIP()[3] == 64) {
+        client.println("Kuchnia");
+      } else if (WiFi.localIP()[3] == 70) {
+        client.println("Salon");
+      } else if (WiFi.localIP()[3] == 29) {
+        client.println("Jadalnia");
+      } else if (WiFi.localIP()[3] == 14) {
+        client.println("Pompa");
+      } else if (WiFi.localIP()[3] == 3) {
+        client.println("Kwiatki");
+      } else {
+        client.println(WiFi.localIP());
       }
       client.println("</h2>");
       client.println("<hr>");
@@ -1325,44 +1318,44 @@ bool ObslugaKlienta(){
       client.print("."); client.print(currentYear);
       client.println("</h6>");
       client.println("<hr>");
-      if(WiFi.localIP()[3]==14 || WiFi.localIP()[3]==3){
-        if(WiFi.localIP()[3]==14)client.println("<p class='w3-large'><b><i class='fa fa-asterisk fa-fw w3-margin-right w3-text-teal'></i>Pompa jest");
-        if(WiFi.localIP()[3]==3)client.println("<p class='w3-large'><b><i class='fa fa-asterisk fa-fw w3-margin-right w3-text-teal'></i>Kwiatki są");
-        if(going_up==1){
+      if (WiFi.localIP()[3] == 14 || WiFi.localIP()[3] == 3) {
+        if (WiFi.localIP()[3] == 14)client.println("<p class='w3-large'><b><i class='fa fa-asterisk fa-fw w3-margin-right w3-text-teal'></i>Pompa jest");
+        if (WiFi.localIP()[3] == 3)client.println("<p class='w3-large'><b><i class='fa fa-asterisk fa-fw w3-margin-right w3-text-teal'></i>Kwiatki są");
+        if (going_up == 1) {
           client.println("<span style='color:green;'>włączona</span>");
           client.println("</p>");
           client.println("<span style='font-size:100px;color:green;'><a href=\"/WIFI_CONTROL=UP\">&#9745;</a></span>");
           client.println("<span style='font-size:100px;color:gray;'><a href=\"/WIFI_CONTROL=STOP\">&#9744;</a></span>");
-        }else{
+        } else {
           client.println("<span style='color:red;'>wyłączona</span>");
           client.println("</p>");
           client.println("<span style='font-size:100px;color:gray;'><a href=\"/WIFI_CONTROL=UP\">&#9745;</a></span>");
           client.println("<span style='font-size:100px;color:red;'><a href=\"/WIFI_CONTROL=STOP\">&#9744;</a></span>");
         }
-      }else{
+      } else {
         client.println("<span style='font-size:100px;'><a href=\"/WIFI_CONTROL=UP\">&uarr;</a></span>");
         client.println("<span style='font-size:100px;'><a href=\"/WIFI_CONTROL=STOP\">□</a></span>");
         client.println("<span style='font-size:100px;'><a href=\"/WIFI_CONTROL=DOWN\">&darr;</a></span>");
       }
-      if(WiFi.localIP()[3]==64){
+      if (WiFi.localIP()[3] == 64) {
         client.println("<br>");
         client.println("<span style='font-size:100px;'><a href=\"/WIFI_CONTROL2=UP\">&uarr;</a></span>");
         client.println("<span style='font-size:100px;'><a href=\"/WIFI_CONTROL2=STOP\">▣</a></span>");
         client.println("<span style='font-size:100px;'><a href=\"/WIFI_CONTROL2=DOWN\">&darr;</a></span>");
       }
       /*
-      if(WiFi.localIP()[3] != 14){
-      client.println("<hr>");
-      client.println("<p class='w3-large'><b><i class='fa fa-asterisk fa-fw w3-margin-right w3-text-teal'></i>Szacowany stopień otwarcia</b></p>");
-      client.println("<div class='w3-light-grey w3-round-xlarge w3-small'>");
-      client.println("<div class='w3-container w3-center w3-round-xlarge w3-teal' style='width:");
-      client.print(szacowany_stopien_otwarcia);
-      client.print("%'>");
-      client.println(szacowany_stopien_otwarcia);
-      client.println("%</div>");
-      client.println("</div>");
-     }
-      if(WiFi.localIP()[3] == 64){
+        if(WiFi.localIP()[3] != 14){
+        client.println("<hr>");
+        client.println("<p class='w3-large'><b><i class='fa fa-asterisk fa-fw w3-margin-right w3-text-teal'></i>Szacowany stopień otwarcia</b></p>");
+        client.println("<div class='w3-light-grey w3-round-xlarge w3-small'>");
+        client.println("<div class='w3-container w3-center w3-round-xlarge w3-teal' style='width:");
+        client.print(szacowany_stopien_otwarcia);
+        client.print("%'>");
+        client.println(szacowany_stopien_otwarcia);
+        client.println("%</div>");
+        client.println("</div>");
+        }
+        if(WiFi.localIP()[3] == 64){
         client.println("<div class='w3-light-grey w3-round-xlarge w3-small'>");
         client.println("<div class='w3-container w3-center w3-round-xlarge w3-teal' style='width:");
         client.print(szacowany_stopien_otwarcia2);
@@ -1370,10 +1363,10 @@ bool ObslugaKlienta(){
         client.println(szacowany_stopien_otwarcia2);
         client.println("%</div>");
         client.println("</div>");
-      }
+        }
       */
-      client.println("<hr>"); 
-      if(automatyczny){
+      client.println("<hr>");
+      if (automatyczny) {
         client.println("<p class='w3-large'><b><i class='fa fa-asterisk fa-fw w3-margin-right w3-text-teal'></i>Ustawienia</b></p>");
         client.println("<div class='dropdown'>");
         client.println("<p class='w3-large'>Wybór trybu</p>");
@@ -1391,10 +1384,10 @@ bool ObslugaKlienta(){
         client.println("</ul></div>");
         client.println("<hr>");
       }
-      if(tryb==0){      
-      client.println("          <p class='w3-large'><b><i class='fa fa-sun-o fa-fw w3-margin-right w3-text-teal'></i>Wschód");
-      }else{
-      client.println("          <p class='w3-large'><b><i class='fa fa-sun-o fa-fw w3-margin-right w3-text-teal'></i>Godzina otwarcia");  
+      if (tryb == 0) {
+        client.println("          <p class='w3-large'><b><i class='fa fa-sun-o fa-fw w3-margin-right w3-text-teal'></i>Wschód");
+      } else {
+        client.println("          <p class='w3-large'><b><i class='fa fa-sun-o fa-fw w3-margin-right w3-text-teal'></i>Godzina otwarcia");
       }
       client.print(SunriseHour); client.print(":");
       if (SunriseMinute < 10)client.print("0");
@@ -1410,9 +1403,9 @@ bool ObslugaKlienta(){
         client.print(SunriseMinuteOffset); client.print("m");
       }
       client.println("</b></p>");
-      if(tryb==0){      
+      if (tryb == 0) {
         client.println("          <p class='w3-large'><b><i class='fa fa-moon-o fa-fw w3-margin-right w3-text-teal'></i>Zachód");
-      }else{
+      } else {
         client.println("          <p class='w3-large'><b><i class='fa fa-moon-o fa-fw w3-margin-right w3-text-teal'></i>Godzina zamknięcia");
       }
       client.print(SunsetHour); client.print(":");
@@ -1430,18 +1423,18 @@ bool ObslugaKlienta(){
       }
       client.println("</b></p>");
       client.println("          <p class='w3-large'><b><i class='fa fa-bars fa-fw w3-margin-right w3-text-teal'></i>Otwiera: ");
-      if(openning_level==1){
-         client.println("całe");
-      }if(openning_level==2){
-         client.println("połowa");
-      }if(openning_level==3){
-         client.println("1/3");
-      }if(openning_level==4){
-         client.println("1/4");
+      if (openning_level == 1) {
+        client.println("całe");
+      } if (openning_level == 2) {
+        client.println("połowa");
+      } if (openning_level == 3) {
+        client.println("1/3");
+      } if (openning_level == 4) {
+        client.println("1/4");
       }
       client.println("</b></p>");
 
-      if(tryb==1){
+      if (tryb == 1) {
         client.println("<div class='dropdown'>");
         client.println("<p class='w3-large'>Otwarcie</p>");
         client.println("<ul class='dropdown-content'>");
@@ -1507,13 +1500,13 @@ bool ObslugaKlienta(){
         client.print("<span style='color:red;'>Wylączone</span>");
       }
       client.print("</b></h5>");
-      client.println("<h3>LOG</h3>");       
+      client.println("<h3>LOG</h3>");
       client.println("<table>");
-      for(int i=0;i<30;i++){
+      for (int i = 0; i < 30; i++) {
         client.println(logDEBUG[i]);
-      }      
+      }
       client.println("</table>");
-      
+
       client.println("</div>");
       client.println("    <!-- End Right Column -->");
       client.println("    </div>");
@@ -1538,7 +1531,7 @@ bool ObslugaKlienta(){
       client.println("          </div>");
       client.println("<hr>");
       client.println("<p class='w3-large'><b><i class='fa fa-asterisk fa-fw w3-margin-right w3-text-teal'></i>Offset</b></p>");
-      
+
       client.println("<div class='dropdown'>");
       client.println("<p class='w3-large'>Wschód</p>");
       client.println("<div class='dropdown-content'>");
@@ -1557,7 +1550,7 @@ bool ObslugaKlienta(){
       client.println("<li><a href='/OFFSET_SUNRISE_M=30'>+30 m</a></li>");
       client.println("<li><a href='/OFFSET_SUNRISE_M=45'>+45 m</a></li>");
       client.println("</ul></div></div>");
-      
+
       client.println("<div class='dropdown'>");
       client.println("<p class='w3-large'>Zachód</p>");
       client.println("<div class='dropdown-content'>");
@@ -1576,7 +1569,7 @@ bool ObslugaKlienta(){
       client.println("<li><a href='/OFFSET_SUNSET_M=30'>+30 m</a></li>");
       client.println("<li><a href='/OFFSET_SUNSET_M=45'>+45 m</a></li>");
       client.println("</ul></div></div>");
-      
+
       client.println("          <hr>");
       client.println("          <p class='w3-large'><i class='fa fa-wifi fa-fw w3-margin-right w3-large w3-text-teal'></i>");
       client.println(WiFi.SSID());
@@ -1587,19 +1580,19 @@ bool ObslugaKlienta(){
       client.println("          <p class='w3-large'><i class='fa fa-lock fa-fw w3-margin-right w3-large w3-text-teal'></i>");
       client.println(WiFi.macAddress());
       client.println("</p>");
-            client.println("          <hr>");
+      client.println("          <hr>");
       client.println("<table>");
-      for(int i=0;i<30;i++){
+      for (int i = 0; i < 30; i++) {
         client.println(logMessage[i]);
-      }      
-      client.println("</table>"); 
-            client.println("          <hr>");
-            
+      }
+      client.println("</table>");
+      client.println("          <hr>");
+
       client.println("<p>Rolety Osiek wersja ");
       client.println(PROGRAM_VERSION);
-            client.println("          <hr>");
+      client.println("          <hr>");
       client.println(timeClient.getFormattedTime());
-            client.println("          <hr>");
+      client.println("          <hr>");
       client.print("timeClientEpochTime: ");
       client.println(timeClient.getEpochTime());
       client.print("timeClientEpochTimedifference:");
@@ -1616,11 +1609,11 @@ bool ObslugaKlienta(){
       client.println("  <!-- End Page Container -->");
       client.println("</div>");
       client.println("</body></html>");
-      }
-      Serial.println("Client disconnected");
-      //Serial.println("");
-      return 1;
     }
+    Serial.println("Client disconnected");
+    //Serial.println("");
+    return 1;
+  }
   if (debug == 1) Serial.println("######## KONIEC LOOP ########");
   return 0;
 }
