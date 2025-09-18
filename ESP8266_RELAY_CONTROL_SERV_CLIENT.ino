@@ -44,7 +44,8 @@ int sGPIO[4] = {0, 0, 0, 0};
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 20.30;
+float PROGRAM_VERSION = 20.35;
+//20.35 ostatniaAktywacja reset o 24:00
 //20.30 added wifi setup every time in loop - added more ifs for the server side
 //20.20 1pass
 //20.12 nowy warunek aktywacji ostatniaAktywacja +60
@@ -72,7 +73,6 @@ float PROGRAM_VERSION = 20.30;
 // Fryzjer to ?
 
 String ssid[3] = {"Osiek", "pozdrawiam", "pozdrawiam_plus"};
-
 String password = "osiekrulz";
 
 const int ms = 20;
@@ -94,7 +94,7 @@ String weekDays[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "F
 String months[12] = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
 String request;
 
-int aktywacja = 999999;
+//int aktywacja = 999999;
 long ostatniaAktywacja = 0;
 int warAktywacji = 2000; //5 * 60 /*sekund*/ / (ms / 1000.0);
 unsigned int x_times_up = 0, x_times_down = 0;
@@ -712,8 +712,8 @@ void loop() {
         if (!sGPIO[3])digitalWrite(D3, HIGH);    
       }
     }
-    if (ostatniaAktywacja >= 24 * 60) {
-      ostatniaAktywacja = ostatniaAktywacja-24*60;
+    if (ostatniaAktywacja >= 24 * 60 || currentHour < 01){
+      ostatniaAktywacja = 0;
     }
 
     if (old_controls == LOW) {
