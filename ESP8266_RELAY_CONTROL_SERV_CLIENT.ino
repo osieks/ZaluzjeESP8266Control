@@ -19,8 +19,8 @@ unsigned long currentMillis = millis();
 #include <Arduino_JSON.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
-#include <ESP8266WiFiMulti.h>
-ESP8266WiFiMulti wiFiMulti;
+//#include <ESP8266WiFiMulti.h>
+//ESP8266WiFiMulti wiFiMulti;
 const uint32_t connectTimeoutMs = 20000;
 
 bool old_controls = HIGH;
@@ -35,7 +35,7 @@ int sGPIO[4] = {0, 0, 0, 0};
 
 //edit
 //for ota
-//#include <ESP8266mDNS.h>
+#include <ESP8266mDNS.h>
 #include <ArduinoOTA.h>
 
 //for d2d
@@ -44,7 +44,8 @@ int sGPIO[4] = {0, 0, 0, 0};
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 20.35;
+float PROGRAM_VERSION = 20.40;
+//20.40 removed wifimulti
 //20.35 ostatniaAktywacja reset o 24:00
 //20.30 added wifi setup every time in loop - added more ifs for the server side
 //20.20 1pass
@@ -148,9 +149,9 @@ void based_on_ip() {
     serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kwiatki";
     old_controls = LOW;
   } else {
-    ArduinoOTA.setHostname("esp8266_UNKNOWN");
-    WiFi.setHostname("esp8266_UNKNOWN");
-    nazwaHosta = "esp8266_UNKNOWN";
+    //ArduinoOTA.setHostname("esp8266_UNKNOWN");
+    //WiFi.setHostname("esp8266_UNKNOWN");
+    //nazwaHosta = "esp8266_UNKNOWN";
     serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
   }
 }
@@ -183,70 +184,14 @@ void setup() {
   based_on_ip();
   WiFi.mode(WIFI_STA);//OTA
 
-  wiFiMulti.addAP("Osiek","osiekrulz");
-  wiFiMulti.addAP("pozdrawiam","osiekrulz");
-  wiFiMulti.addAP("pozdrawiam_plus","osiekrulz");
-  WiFi.scanNetworks();
+  //wiFiMulti.addAP("Osiek","osiekrulz");
+  //wiFiMulti.addAP("pozdrawiam","osiekrulz");
+  //wiFiMulti.addAP("pozdrawiam_plus","osiekrulz");
+  //WiFi.scanNetworks();
   
   /* jak fryzjer to tutaj zmienić na stałe ip */
   /* PAMIĘTAĆ */
   Serial.println(WiFi.localIP());
-
-  /*WiFi.begin(ssid[0], password);
-    Serial.print("Connection success");
-    Serial.println(ssid[0]);
-    delay(10000);
-  */
-  //ssid = {"osiek", "pozdrawiam", "pozdrawiam_plus", "pozdrawiam2"};
-  if (WiFi.localIP()[3] == 36) {
-    Serial.println("Mateusz");
-
-  } else if (WiFi.localIP()[3] == 3) {
-    Serial.println("Kwiatki");
-    ssid[1] = "Osiek";
-    ssid[2] = "Osiek_5Ghz";
-    ssid[3] = "pozdrawiam";
-
-  } else if (WiFi.localIP()[3] == 49) {
-    Serial.println("Lauba");
-    ssid[1] = "pozdrawiam2";
-    ssid[2] = "pozdrawiam_plus";
-    ssid[3] = "pozdrawiam";
-
-  } else if (WiFi.localIP()[3] == 67) {
-    Serial.println("Fryzjer");
-    ssid[1] = "pozdrawiam_plus";
-    ssid[2] = "pozdrawiam2";
-    ssid[3] = "pozdrawiam";
-
-  } else if (WiFi.localIP()[3] == 64) {
-    Serial.println("Kuchnia");
-    ssid[1] = "pozdrawiam_plus";
-    ssid[2] = "pozdrawiam2";
-    ssid[3] = "pozdrawiam";
-
-  } else if (WiFi.localIP()[3] == 70) {
-    Serial.println("Salon");
-    ssid[1] = "pozdrawiam2";
-    ssid[2] = "pozdrawiam_plus";
-    ssid[3] = "pozdrawiam";
-
-  } else if (WiFi.localIP()[3] == 29) {
-    Serial.println("Jadalnia");
-    ssid[1] = "pozdrawiam_plus";
-    ssid[2] = "pozdrawiam2";
-    ssid[3] = "pozdrawiam";
-
-  } else if (WiFi.localIP()[3] == 14) {
-    Serial.println("Pompa");
-    ssid[1] = "pozdrawiam2";
-    ssid[2] = "pozdrawiam_plus";
-    ssid[3] = "pozdrawiam";
-
-  } else {
-    Serial.println(WiFi.localIP());
-    Serial.println("Niezmienione ssidy");
-  }
 
   //
   /*while (WiFi.status() != WL_CONNECTED) {
@@ -305,6 +250,7 @@ void setup() {
     else if (error == OTA_END_ERROR) Serial.println("End Failed");
   });
   ArduinoOTA.begin();
+  //setupOTA();
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
@@ -447,8 +393,8 @@ void loop() {
   if (debug == 1) Serial.println("######## POCZĄTEK LOOP########");
   // aktualizacje przez sieć
   ArduinoOTA.handle();
-  // idk
-  //MDNS.update();
+  // dla OTA
+  MDNS.update();
   // gdy IP się zmieni wyslanie do serwera nowego
   //EasyDDNS.update(10000);
   
@@ -456,7 +402,7 @@ void loop() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi Disconnected");
     // setting 8.15
-    based_on_ip();
+    //based_on_ip();
     server.begin(port);
     
     for (int i = 0; i < 3; i++) {
@@ -476,8 +422,9 @@ void loop() {
   }
   // ############################ POBIERANIE DANYCH Z SERWERA !!! ###################################
 
-
-  if ((wiFiMulti.run(connectTimeoutMs) == WL_CONNECTED)) {
+  
+  //if ((wiFiMulti.run(connectTimeoutMs) == WL_CONNECTED)) {
+  if ((WiFi.status() == WL_CONNECTED)) {
     outputsState = httpGETRequest(serverName);
     if (debug == 1) {
       Serial.println(serverName);
@@ -1573,7 +1520,10 @@ bool ObslugaKlienta() {
       client.println("          <hr>");
       client.println("          <p class='w3-large'><i class='fa fa-wifi fa-fw w3-margin-right w3-large w3-text-teal'></i>");
       client.println(WiFi.SSID());
-      client.println("</p>");
+      client.println("</p>");      
+      client.println("          <p class='w3-large'><i class='fa fa-wifi fa-fw w3-margin-right w3-large w3-text-teal'></i>");
+      client.println(nazwaHosta);
+      client.println("</p>");      
       client.println("          <p class='w3-large'><i class='fa fa-tag fa-fw w3-margin-right w3-large w3-text-teal'></i>");
       client.println(WiFi.localIP());
       client.println("</p>");
