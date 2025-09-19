@@ -44,7 +44,8 @@ int sGPIO[4] = {0, 0, 0, 0};
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 20.40;
+float PROGRAM_VERSION = 20.50;
+//20.50 added second ntp client
 //20.40 removed wifimulti
 //20.35 ostatniaAktywacja reset o 24:00
 //20.30 added wifi setup every time in loop - added more ifs for the server side
@@ -79,11 +80,13 @@ String password = "osiekrulz";
 const int ms = 20;
 
 // Define NTP Client to get time
-WiFiUDP ntpUDP;
-//NTPClient timeClient(ntpUDP, "pool.ntp.org");
-NTPClient timeClient(ntpUDP);
-unsigned long timeClientEpochTimedifference;
-unsigned long timeClientPrevEpochTime;
+WiFiUDP ntpUDP1,  ntpUDP2;
+//NTPClient timeClient1(ntpUDP1, "pool.ntp.org");
+NTPClient timeClient1(ntpUDP1, "pool.ntp.org");
+NTPClient timeClient2(ntpUDP2, "time.google.com");
+time_t timeDiff;
+time_t epochTime;
+
 //WifiServer
 
 int port = 300;
@@ -280,19 +283,22 @@ void setup() {
     });
   */
   // Initialize a NTPClient to get time
-  timeClient.begin();
+  timeClient1.begin();
+  timeClient2.begin();
   // Set offset time in seconds to adjust for your timezone, for example:
   // GMT +1 = 3600
   // GMT +8 = 28800
   // GMT -1 = -3600
   // GMT 0 = 0
 
-  timeClient.setTimeOffset(7200);
+  timeClient1.setTimeOffset(7200);
+  timeClient2.setTimeOffset(7200);
 
-  timeClient.update();
+  timeClient1.update();
+  timeClient2.update();
 
   /*
-    time_t epochTime = timeClient.getEpochTime();
+    time_t epochTime = timeClient1.getEpochTime();
     struct tm *ptm = gmtime ((time_t *)&epochTime);
     int monthDay = ptm->tm_mday;
     int currentMonth = ptm->tm_mon + 1;
@@ -300,9 +306,9 @@ void setup() {
     if((currentMonth>=4 && currentMonth<=9)
       || (currentMonth==3 && monthDay>=27)
       || (currentMonth==10 && monthDay<30)){
-      timeClient.setTimeOffset(7200);
+      timeClient1.setTimeOffset(7200);
     }else{
-      timeClient.setTimeOffset(3600);
+      timeClient1.setTimeOffset(3600);
     }
   */
   Serial.println("######## KONIEC SETUP ########");
@@ -420,6 +426,39 @@ void loop() {
       Serial.println(ssid[i]);
     }
   }
+
+  //############################# CZAS Z NTP  2 minuty = 2 * 60 sec = 2 * 60 * 1000ms #############################################
+  if (WiFi.status() == WL_CONNECTED && millis()%(2 * 60 * 1000)) {
+      bool success1 = timeClient1.update();
+      bool success2 = timeClient2.update();
+      if (!success1 || !success2) {
+        Serial.println("Failed to get time from one or both sources");
+      }else{
+        // Get epoch times from both sources
+        time_t epochTime1 = timeClient1.getEpochTime();
+        time_t epochTime2 = timeClient2.getEpochTime();
+        
+        // Compare times (allow 5 second difference)
+        timeDiff = abs(epochTime1 - epochTime2);
+        
+        if (timeDiff <= 5) {
+          Serial.print("Times match within tolerance. Diff: ");
+              epochTime = timeClient1.getEpochTime();
+              currentHour = timeClient1.getHours();
+              currentMinute = timeClient1.getMinutes();
+              currentSecond = timeClient1.getSeconds();
+              //Get a time structure
+              tm *ptm = gmtime ((time_t *)&epochTime);
+              monthDay = ptm->tm_mday;
+              currentMonth = ptm->tm_mon + 1;
+              currentYear = ptm->tm_year + 1900;
+
+        } else {
+          Serial.print("Times don't match. Diff: ");
+        }
+        Serial.println(timeDiff);
+      }
+    }
   // ############################ POBIERANIE DANYCH Z SERWERA !!! ###################################
 
   
@@ -489,9 +528,7 @@ void loop() {
   if (currentMillis - previousMillis >= ms) {
     previousMillis = currentMillis;
     logNrDEBUG = 0;
-    if (WiFi.status() == WL_CONNECTED) {
-      timeClient.update();
-    }
+    
     /*
       if(going_up==HIGH){
       szacowany_stopien_otwarcia += 0.001*(currentMillis-szacowaneOtwieranieMillis)*3.5;
@@ -516,21 +553,12 @@ void loop() {
       if(szacowany_stopien_otwarcia<0)szacowany_stopien_otwarcia=0;
       if(szacowany_stopien_otwarcia2<0)szacowany_stopien_otwarcia2=0;
     */
-    time_t epochTime = timeClient.getEpochTime();
-    currentHour = timeClient.getHours();
-    currentMinute = timeClient.getMinutes();
-    currentSecond = timeClient.getSeconds();
-    //Get a time structure
-    tm *ptm = gmtime ((time_t *)&epochTime);
-    monthDay = ptm->tm_mday;
-    currentMonth = ptm->tm_mon + 1;
-    currentYear = ptm->tm_year + 1900;
 
     if (debug == 1) {
       Serial.print("Epoch Time: ");
       Serial.println(epochTime);
 
-      String formattedTime = timeClient.getFormattedTime();
+      String formattedTime = timeClient1.getFormattedTime();
       Serial.print("Formatted Time: ");
       Serial.println(formattedTime);
 
@@ -543,7 +571,7 @@ void loop() {
       Serial.print("Seconds: ");
       Serial.println(currentSecond);
 
-      String weekDay = weekDays[timeClient.getDay()];
+      String weekDay = weekDays[timeClient1.getDay()];
       Serial.print("Week Day: ");
       Serial.println(weekDay);
 
@@ -581,11 +609,13 @@ void loop() {
     if ((currentMonth >= 4 && currentMonth <= 9)
         || (currentMonth == 3 && monthDay >= 27)
         || (currentMonth == 10 && monthDay < 30)) {
-      timeClient.setTimeOffset(7200);
+      timeClient1.setTimeOffset(7200);
+      timeClient2.setTimeOffset(7200);
     } else {
       Sunrise = Sunrise - 60;
       Sunset = Sunset - 60;
-      timeClient.setTimeOffset(3600);
+      timeClient1.setTimeOffset(3600);
+      timeClient2.setTimeOffset(3600);
     }
 
 
@@ -1541,15 +1571,21 @@ bool ObslugaKlienta() {
       client.println("<p>Rolety Osiek wersja ");
       client.println(PROGRAM_VERSION);
       client.println("          <hr>");
-      client.println(timeClient.getFormattedTime());
+      client.print("timeClient1getFormattedTime: ");
+      client.println(timeClient1.getFormattedTime());
+      client.print("timeClient1getFormattedTime: ");
+      client.println(timeClient2.getFormattedTime());
       client.println("          <hr>");
-      client.print("timeClientEpochTime: ");
-      client.println(timeClient.getEpochTime());
-      client.print("timeClientEpochTimedifference:");
-      client.println(timeClientEpochTimedifference);
+      client.print("timeClient1EpochTime: ");
+      client.println(timeClient1.getEpochTime());
+      client.print("timeClient1EpochTime: ");
+      client.println(timeClient2.getEpochTime());
+      client.println("");
+      client.print("timeDiff: ");
+      client.println(timeDiff);
       client.print("bool old_controls = ");
       client.println(old_controls);
-      client.println("<p>");
+      client.println("</p>");
       client.println("        </div>");
       client.println("      </div><br>");
       client.println("    <!-- End Left Column -->");
