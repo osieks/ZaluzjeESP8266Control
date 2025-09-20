@@ -44,7 +44,9 @@ int sGPIO[4] = {0, 0, 0, 0};
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 20.52;
+float PROGRAM_VERSION = 20.55;
+//20.55  ntp fix for successed from updates
+//20.54  ntp in ms loop
 //20.52 logging for ntp
 //20.50 added second ntp client
 //20.40 removed wifimulti
@@ -500,27 +502,44 @@ void loop() {
     bool success1 = timeClient1.update();
     bool success2 = timeClient2.update();
     
-    if (!success1 || !success2) {
+    logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>success1=" + success1 +" || success2=" + success2 + "</td></tr>";
+    if (logNrDEBUG >= 30)logNrDEBUG = 0;
+    Serial.print(logDEBUG[logNrDEBUG - 1]);
+    
+    if (success1 || success2) {
       Serial.println("Failed to get time from one or both sources");
     }else{
       // Get epoch times from both sources
       time_t epochTime1 = timeClient1.getEpochTime();
       time_t epochTime2 = timeClient2.getEpochTime();
+
+      logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>abs(epochTime1 - epochTime2)=" + abs(epochTime1 - epochTime2) +" epochTime1=" + epochTime1 + " epochTime2=" + epochTime2 + "</td></tr>";
+      if (logNrDEBUG >= 30)logNrDEBUG = 0;
+      Serial.print(logDEBUG[logNrDEBUG - 1]);
       
       // Compare times (allow X second difference)
       timeDiff = abs(epochTime1 - epochTime2);
       
       if (timeDiff <= 10) {
-        Serial.print("Times match within tolerance. Diff: ");
-            epochTime = timeClient1.getEpochTime();
-            currentHour = timeClient1.getHours();
-            currentMinute = timeClient1.getMinutes();
-            currentSecond = timeClient1.getSeconds();
-            //Get a time structure
-            tm *ptm = gmtime ((time_t *)&epochTime);
-            monthDay = ptm->tm_mday;
-            currentMonth = ptm->tm_mon + 1;
-            currentYear = ptm->tm_year + 1900;
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>Times match within tolerance. Diff:"+timeDiff+"</td></tr>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.println(logDEBUG[logNrDEBUG - 1]);
+        
+        Serial.println("Times match within tolerance. Diff: ");
+        Serial.println(timeDiff);
+        epochTime = timeClient1.getEpochTime();
+        currentHour = timeClient1.getHours();
+        currentMinute = timeClient1.getMinutes();
+        currentSecond = timeClient1.getSeconds();
+        //Get a time structure
+        tm *ptm = gmtime ((time_t *)&epochTime);
+        monthDay = ptm->tm_mday;
+        currentMonth = ptm->tm_mon + 1;
+        currentYear = ptm->tm_year + 1900;
+        
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>epochTime="+epochTime+" currentHour="+currentHour+" currentMinute="+currentMinute+" currentSecond="+currentSecond+"</td></tr>";
+        if (logNrDEBUG >= 30)logNrDEBUG = 0;
+        Serial.println(logDEBUG[logNrDEBUG - 1]);
 
       } else {
         Serial.print("Times don't match. Diff: ");
