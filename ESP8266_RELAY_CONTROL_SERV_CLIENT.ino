@@ -83,7 +83,7 @@ const int ms = 20;
 // Define NTP Client to get time
 WiFiUDP ntpUDP1,  ntpUDP2;
 //NTPClient timeClient1(ntpUDP1, "pool.ntp.org");
-NTPClient timeClient1(ntpUDP1, "pool.ntp.org");
+NTPClient timeClient1(ntpUDP1, "europe.pool.ntp.org");
 NTPClient timeClient2(ntpUDP2, "time.google.com");
 time_t timeDiff;
 time_t epochTime;
@@ -428,38 +428,7 @@ void loop() {
     }
   }
 
-  //############################# CZAS Z NTP  2 minuty = 2 * 60 sec = 2 * 60 * 1000ms #############################################
-  if (WiFi.status() == WL_CONNECTED && millis()%(2 * 60 * 1000)) {
-      bool success1 = timeClient1.update();
-      bool success2 = timeClient2.update();
-      if (!success1 || !success2) {
-        Serial.println("Failed to get time from one or both sources");
-      }else{
-        // Get epoch times from both sources
-        time_t epochTime1 = timeClient1.getEpochTime();
-        time_t epochTime2 = timeClient2.getEpochTime();
-        
-        // Compare times (allow 5 second difference)
-        timeDiff = abs(epochTime1 - epochTime2);
-        
-        if (timeDiff <= 5) {
-          Serial.print("Times match within tolerance. Diff: ");
-              epochTime = timeClient1.getEpochTime();
-              currentHour = timeClient1.getHours();
-              currentMinute = timeClient1.getMinutes();
-              currentSecond = timeClient1.getSeconds();
-              //Get a time structure
-              tm *ptm = gmtime ((time_t *)&epochTime);
-              monthDay = ptm->tm_mday;
-              currentMonth = ptm->tm_mon + 1;
-              currentYear = ptm->tm_year + 1900;
-
-        } else {
-          Serial.print("Times don't match. Diff: ");
-        }
-        Serial.println(timeDiff);
-      }
-    }
+  //############################# CZAS Z NTP  1 minuty = 1 * 60 sec = 2 * 60 * 1000ms #############################################   
   // ############################ POBIERANIE DANYCH Z SERWERA !!! ###################################
 
   
@@ -519,9 +488,7 @@ void loop() {
 
   ObslugaKlienta();
   // żeby log nie wyleciał za 30
-  if (logNr >= 30) {
-    logNr = 0;
-  }
+  if (logNr >= 30) logNr = 0;
   if (logNrDEBUG >= 30)logNrDEBUG = 0;
 
 
@@ -530,6 +497,36 @@ void loop() {
     previousMillis = currentMillis;
     logNrDEBUG = 0;
     
+    bool success1 = timeClient1.update();
+    bool success2 = timeClient2.update();
+    
+    if (!success1 || !success2) {
+      Serial.println("Failed to get time from one or both sources");
+    }else{
+      // Get epoch times from both sources
+      time_t epochTime1 = timeClient1.getEpochTime();
+      time_t epochTime2 = timeClient2.getEpochTime();
+      
+      // Compare times (allow X second difference)
+      timeDiff = abs(epochTime1 - epochTime2);
+      
+      if (timeDiff <= 10) {
+        Serial.print("Times match within tolerance. Diff: ");
+            epochTime = timeClient1.getEpochTime();
+            currentHour = timeClient1.getHours();
+            currentMinute = timeClient1.getMinutes();
+            currentSecond = timeClient1.getSeconds();
+            //Get a time structure
+            tm *ptm = gmtime ((time_t *)&epochTime);
+            monthDay = ptm->tm_mday;
+            currentMonth = ptm->tm_mon + 1;
+            currentYear = ptm->tm_year + 1900;
+
+      } else {
+        Serial.print("Times don't match. Diff: ");
+      }
+      Serial.println(timeDiff);
+    }
     /*
       if(going_up==HIGH){
       szacowany_stopien_otwarcia += 0.001*(currentMillis-szacowaneOtwieranieMillis)*3.5;
@@ -1577,12 +1574,12 @@ bool ObslugaKlienta() {
       client.println("          <hr>");
       client.print("timeClient1getFormattedTime: ");
       client.println(timeClient1.getFormattedTime());
-      client.print("timeClient1getFormattedTime: ");
+      client.print("timeClient2getFormattedTime: ");
       client.println(timeClient2.getFormattedTime());
       client.println("          <hr>");
       client.print("timeClient1EpochTime: ");
       client.println(timeClient1.getEpochTime());
-      client.print("timeClient1EpochTime: ");
+      client.print("timeClient2EpochTime: ");
       client.println(timeClient2.getEpochTime());
       client.println("");
       client.print("timeDiff: ");
