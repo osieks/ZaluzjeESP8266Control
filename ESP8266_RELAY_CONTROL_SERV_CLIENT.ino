@@ -25,7 +25,7 @@ const uint32_t connectTimeoutMs = 20000;
 
 bool old_controls = HIGH;
 String outputsState;
-String serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
+String serverName = "http://dziezok.ddns.net:8080/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
 JSONVar myObject;
 int sGPIO[4] = {0, 0, 0, 0};
 
@@ -44,7 +44,8 @@ int sGPIO[4] = {0, 0, 0, 0};
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 20.55;
+float PROGRAM_VERSION = 20.56;
+//20.55  new 
 //20.55  ntp fix for successed from updates
 //20.54  ntp in ms loop
 //20.52 logging for ntp
@@ -116,27 +117,27 @@ void based_on_ip() {
     ArduinoOTA.setHostname("esp8266_mateusz");
     WiFi.setHostname("esp8266_mateusz");
     nazwaHosta = "esp8266_mateusz";
-    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Mateusz";
+    serverName = "http://dziezok.ddns.net:8080/esp-outputs-action.php?action=outputs_state&board=Mateusz";
   } else if (WiFi.localIP()[3] == 49) {
     ArduinoOTA.setHostname("esp8266_lauba");
     WiFi.setHostname("esp8266_lauba");
     nazwaHosta = "esp8266_lauba";
-    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Lauba";
+    serverName = "http://dziezok.ddns.net:8080/esp-outputs-action.php?action=outputs_state&board=Lauba";
   } else if (WiFi.localIP()[3] == 64) {
     ArduinoOTA.setHostname("esp8266_kuchnia");
     WiFi.setHostname("esp8266_kuchnia");
     nazwaHosta = "esp8266_kuchnia";
-    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
+    serverName = "http://dziezok.ddns.net:8080/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
   } else if (WiFi.localIP()[3] == 70) {
     ArduinoOTA.setHostname("esp8266_salon");
     WiFi.setHostname("esp8266_salon");
     nazwaHosta = "esp8266_salon";
-    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Salon";
+    serverName = "http://dziezok.ddns.net:8080/esp-outputs-action.php?action=outputs_state&board=Salon";
   } else if (WiFi.localIP()[3] == 29) {
     ArduinoOTA.setHostname("esp8266_jadalnia");
     WiFi.setHostname("esp8266_jadalnia");
     nazwaHosta = "esp8266_jadalnia";
-    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Jadalnia";
+    serverName = "http://dziezok.ddns.net:8080/esp-outputs-action.php?action=outputs_state&board=Jadalnia";
   } else if (WiFi.localIP()[3] == 67 || WiFi.localIP()[3] == 56 ) {
     ArduinoOTA.setHostname("esp8266_fryzjer");
     WiFi.setHostname("esp8266_fryzjer");
@@ -146,19 +147,19 @@ void based_on_ip() {
     WiFi.setHostname("esp8266_pompa");
     nazwaHosta = "esp8266_pompa";
     old_controls = LOW;
-    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Pompa";
+    serverName = "http://dziezok.ddns.net:8080/esp-outputs-action.php?action=outputs_state&board=Pompa";
     automatyczny = LOW;
   } else if (WiFi.localIP()[3] == 3) {
     ArduinoOTA.setHostname("esp8266_kwiatki");
     WiFi.setHostname("esp8266_kwiatki");
     nazwaHosta = "esp8266_kwiatki";
-    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kwiatki";
+    serverName = "http://dziezok.ddns.net:8080/esp-outputs-action.php?action=outputs_state&board=Kwiatki";
     old_controls = LOW;
   } else {
     //ArduinoOTA.setHostname("esp8266_UNKNOWN");
     //WiFi.setHostname("esp8266_UNKNOWN");
     //nazwaHosta = "esp8266_UNKNOWN";
-    serverName = "http://dziezok.ddns.net/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
+    serverName = "http://dziezok.ddns.net:8080/esp-outputs-action.php?action=outputs_state&board=Kuchnia";
   }
 }
 
@@ -504,7 +505,7 @@ void loop() {
     
     logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>success1=" + success1 +" || success2=" + success2 + "</td></tr>";
     if (logNrDEBUG >= 30)logNrDEBUG = 0;
-    Serial.print(logDEBUG[logNrDEBUG - 1]);
+    if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
     
     if (success1 || success2) {
       Serial.println("Failed to get time from one or both sources");
@@ -515,7 +516,7 @@ void loop() {
 
       logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>abs(epochTime1 - epochTime2)=" + abs(epochTime1 - epochTime2) +" epochTime1=" + epochTime1 + " epochTime2=" + epochTime2 + "</td></tr>";
       if (logNrDEBUG >= 30)logNrDEBUG = 0;
-      Serial.print(logDEBUG[logNrDEBUG - 1]);
+      if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
       
       // Compare times (allow X second difference)
       timeDiff = abs(epochTime1 - epochTime2);
@@ -714,20 +715,20 @@ void loop() {
       // AKTYWAXJA GDY AUTO
       logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>ostatniaAktywacja=" + ostatniaAktywacja + "</td></tr>";
       if (logNrDEBUG >= 30)logNrDEBUG = 0;
-      Serial.print(logDEBUG[logNrDEBUG - 1]);
+      if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
       logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "if(ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny )" + "</td></tr>";
       if (logNrDEBUG >= 30)logNrDEBUG = 0;
-      Serial.print(logDEBUG[logNrDEBUG - 1]);
+      if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
       logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "if(" + String(ostatniaAktywacja) + " + 60 < (" + currentHour + " * 60 + " + currentMinute + ") && " + automatyczny + " )" + "</td></tr>";
       if (logNrDEBUG >= 30)logNrDEBUG = 0;
-      Serial.print(logDEBUG[logNrDEBUG - 1]);
+      if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
 
       //if (aktywacja >= warAktywacji && automatyczny ) {
       if (ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute ) && automatyczny ) {
 
         logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>TAK aktywacja</td></tr>";
         if (logNrDEBUG >= 30)logNrDEBUG = 0;
-        Serial.print(logDEBUG[logNrDEBUG - 1]);
+        if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
 
         //aktywacja = 0;
         request = "";
@@ -798,20 +799,20 @@ void loop() {
       // AKTYWAXJA GDY AUTO
       logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>ostatniaAktywacja=" + ostatniaAktywacja + "</td></tr>";
       if (logNrDEBUG >= 30)logNrDEBUG = 0;
-      Serial.print(logDEBUG[logNrDEBUG - 1]);
+      if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
       logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "if(ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny )" + "</td></tr>";
       if (logNrDEBUG >= 30)logNrDEBUG = 0;
-      Serial.print(logDEBUG[logNrDEBUG - 1]);
+      if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
       logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>" + "if(" + String(ostatniaAktywacja) + " + 60 < (" + currentHour + " * 60 + " + currentMinute + ") && " + automatyczny + " )" + "</td></tr>";
       if (logNrDEBUG >= 30)logNrDEBUG = 0;
-      Serial.print(logDEBUG[logNrDEBUG - 1]);
+      if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
 
       // AKTYWAXJA GDY AUTO
       if (ostatniaAktywacja + 60 < (currentHour * 60 + currentMinute) && automatyczny ) {
 
         logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>TAK aktywacja</td></tr>";
         if (logNrDEBUG >= 30)logNrDEBUG = 0;
-        Serial.print(logDEBUG[logNrDEBUG - 1]);
+        if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
 
         //aktywacja = 0;
         request = "";
@@ -1260,9 +1261,9 @@ bool ObslugaKlienta() {
           client.println("<a href=\"http://osiek.zapto.org:309/\">Pompa</a>");
         }
         if(WiFi.localIP()[3] == 3){
-          client.println("<a class='active' href=\"http://mdziezok.ddns.net:300/\">Kwiatki</a>");
+          client.println("<a class='active' href=\"http://mdziezok.ddns.net:8080:300/\">Kwiatki</a>");
         }else{
-          client.println("<a href=\"http://mdziezok.ddns.net:300/\">Kwiatki</a>");
+          client.println("<a href=\"http://mdziezok.ddns.net:8080:300/\">Kwiatki</a>");
         }
       */
       client.println("<a href=\"http://192.168.1.36:300\">Mateusz</a>");
@@ -1272,7 +1273,7 @@ bool ObslugaKlienta() {
       client.println("<a href=\"http://192.168.1.70:300\">Salon</a>");
       client.println("<a href=\"http://192.168.1.29:300\">Jadalnia</a>");
       client.println("<a href=\"http://192.168.1.14:300\">Pompa</a>");
-      client.println("<a href=\"http://mdziezok.ddns.net:300\">Kwiatki</a>");
+      client.println("<a href=\"http://mdziezok.ddns.net:8080:300\">Kwiatki</a>");
       client.println("</div>");
       client.println("      <div class='w3-container w3-card w3-white'>");
       client.println("        <h2 class='w3-text-grey w3-padding-16'><i class='fa fa-certificate fa-fw w3-margin-right w3-xxlarge w3-text-teal'></i>");
