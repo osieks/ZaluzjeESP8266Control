@@ -44,7 +44,9 @@ int sGPIO[4] = {0, 0, 0, 0};
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 20.56;
+float PROGRAM_VERSION = 20.61;
+//20.61 logging app messages
+//20.60 lower usage of internet data
 //20.55  new 
 //20.55  ntp fix for successed from updates
 //20.54  ntp in ms loop
@@ -90,6 +92,11 @@ NTPClient timeClient1(ntpUDP1, "europe.pool.ntp.org");
 NTPClient timeClient2(ntpUDP2, "time.google.com");
 time_t timeDiff;
 time_t epochTime;
+
+const long potwierdzenie_odpytania_NTP = 60000/ms;
+long licznik_odpytania_NTP = potwierdzenie_odpytania_NTP;
+const long potwierdzenie_odpytania_SERVERA = 1000/ms;
+long licznik_odpytania_SERVERA = potwierdzenie_odpytania_SERVERA;
 
 //WifiServer
 
@@ -431,55 +438,6 @@ void loop() {
     }
   }
 
-  //############################# CZAS Z NTP  1 minuty = 1 * 60 sec = 2 * 60 * 1000ms #############################################   
-  // ############################ POBIERANIE DANYCH Z SERWERA !!! ###################################
-
-  
-  //if ((wiFiMulti.run(connectTimeoutMs) == WL_CONNECTED)) {
-  if ((WiFi.status() == WL_CONNECTED)) {
-    outputsState = httpGETRequest(serverName);
-    if (debug == 1) {
-      Serial.println(serverName);
-      Serial.println(outputsState);
-    }
-
-    JSONVar myObject = JSON.parse(outputsState);
-
-    // JSON.typeof(jsonVar) can be used to get the type of the var
-    if (JSON.typeof(myObject) == "undefined") {
-      Serial.println("Parsing input failed!");
-      //return;
-    }
-
-    if (debug == 1) {
-      Serial.print("JSON object = ");
-      Serial.println(myObject);
-      Serial.print("JSON length() = ");
-      Serial.println(myObject.length());
-    }
-    if (JSON.typeof(myObject) != "undefined") {
-      for (int iii = 0; iii < myObject.length(); iii++) {
-        sGPIO[iii] = atoi(myObject[iii]);
-      }
-    }
-
-    /*
-      //myObject.keys() can be used to get an array of all the keys in the object
-      JSONVar keys = myObject.keys();
-
-      for (int iii = 0; iii < keys.length(); iii++) {
-      JSONVar value = myObject[keys[iii]];
-      Serial.print("GPIO: ");
-      Serial.print(keys[iii]);
-      Serial.print(" - SET to: ");
-      Serial.println(value);
-      //pinMode(atoi(keys[iii]), OUTPUT);
-      //digitalWrite(atoi(keys[iii]), atoi(value));
-      }
-    */
-
-  }
-
   currentMillis = millis();
   /****************************reset_request*******************************/
   /*
@@ -499,53 +457,96 @@ void loop() {
   if (currentMillis - previousMillis >= ms) {
     previousMillis = currentMillis;
     logNrDEBUG = 0;
-    
-    bool success1 = timeClient1.update();
-    bool success2 = timeClient2.update();
-    
-    logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>success1=" + success1 +" || success2=" + success2 + "</td></tr>";
-    if (logNrDEBUG >= 30)logNrDEBUG = 0;
-    if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
-    
-    if (success1 || success2) {
-      Serial.println("Failed to get time from one or both sources");
-    }else{
-      // Get epoch times from both sources
-      time_t epochTime1 = timeClient1.getEpochTime();
-      time_t epochTime2 = timeClient2.getEpochTime();
+    licznik_odpytania_NTP += 1;
+    licznik_odpytania_SERVERA += 1;
 
-      logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>abs(epochTime1 - epochTime2)=" + abs(epochTime1 - epochTime2) +" epochTime1=" + epochTime1 + " epochTime2=" + epochTime2 + "</td></tr>";
+
+    // ############################ POBIERANIE DANYCH Z NTP !!! ###################################
+    if (licznik_odpytania_NTP >= potwierdzenie_odpytania_NTP){
+      bool success1 = timeClient1.update();
+      bool success2 = timeClient2.update();
+      
+      logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>success1=" + success1 +" || success2=" + success2 + "</td></tr>";
       if (logNrDEBUG >= 30)logNrDEBUG = 0;
       if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
       
-      // Compare times (allow X second difference)
-      timeDiff = abs(epochTime1 - epochTime2);
-      
-      if (timeDiff <= 10) {
-        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>Times match within tolerance. Diff:"+timeDiff+"</td></tr>";
+      if (success1 || success2) {
+        Serial.println("Failed to get time from one or both sources");
+      }else{
+        // Get epoch times from both sources
+        time_t epochTime1 = timeClient1.getEpochTime();
+        time_t epochTime2 = timeClient2.getEpochTime();
+  
+        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>abs(epochTime1 - epochTime2)=" + abs(epochTime1 - epochTime2) +" epochTime1=" + epochTime1 + " epochTime2=" + epochTime2 + "</td></tr>";
         if (logNrDEBUG >= 30)logNrDEBUG = 0;
-        Serial.println(logDEBUG[logNrDEBUG - 1]);
+        if (debug == 1)Serial.print(logDEBUG[logNrDEBUG - 1]);
         
-        Serial.println("Times match within tolerance. Diff: ");
+        // Compare times (allow X second difference)
+        timeDiff = abs(epochTime1 - epochTime2);
+        
+        if (timeDiff <= 10) {
+          
+          licznik_odpytania_NTP=0;
+          
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>Times match within tolerance. Diff:"+timeDiff+"</td></tr>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+          
+          Serial.println("Times match within tolerance. Diff: ");
+          Serial.println(timeDiff);
+          epochTime = timeClient1.getEpochTime();
+          currentHour = timeClient1.getHours();
+          currentMinute = timeClient1.getMinutes();
+          currentSecond = timeClient1.getSeconds();
+          //Get a time structure
+          tm *ptm = gmtime ((time_t *)&epochTime);
+          monthDay = ptm->tm_mday;
+          currentMonth = ptm->tm_mon + 1;
+          currentYear = ptm->tm_year + 1900;
+          
+          logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>epochTime="+epochTime+" currentHour="+currentHour+" currentMinute="+currentMinute+" currentSecond="+currentSecond+"</td></tr>";
+          if (logNrDEBUG >= 30)logNrDEBUG = 0;
+          Serial.println(logDEBUG[logNrDEBUG - 1]);
+  
+        } else {
+          Serial.print("Times don't match. Diff: ");
+        }
         Serial.println(timeDiff);
-        epochTime = timeClient1.getEpochTime();
-        currentHour = timeClient1.getHours();
-        currentMinute = timeClient1.getMinutes();
-        currentSecond = timeClient1.getSeconds();
-        //Get a time structure
-        tm *ptm = gmtime ((time_t *)&epochTime);
-        monthDay = ptm->tm_mday;
-        currentMonth = ptm->tm_mon + 1;
-        currentYear = ptm->tm_year + 1900;
-        
-        logDEBUG[logNrDEBUG++] = "<tr><td>" + currentDate + "</td><td>epochTime="+epochTime+" currentHour="+currentHour+" currentMinute="+currentMinute+" currentSecond="+currentSecond+"</td></tr>";
-        if (logNrDEBUG >= 30)logNrDEBUG = 0;
-        Serial.println(logDEBUG[logNrDEBUG - 1]);
-
-      } else {
-        Serial.print("Times don't match. Diff: ");
       }
-      Serial.println(timeDiff);
+    }
+    //############################# CZAS Z NTP  1 minuty = 1 * 60 sec = 2 * 60 * 1000ms #############################################   
+    // ############################ POBIERANIE DANYCH Z SERWERA !!! ###################################
+    if (licznik_odpytania_SERVERA >= potwierdzenie_odpytania_SERVERA){
+      licznik_odpytania_SERVERA=0;
+      
+      //if ((wiFiMulti.run(connectTimeoutMs) == WL_CONNECTED)) {
+      if ((WiFi.status() == WL_CONNECTED)) {
+        outputsState = httpGETRequest(serverName);
+        if (debug == 1) {
+          Serial.println(serverName);
+          Serial.println(outputsState);
+        }
+    
+        JSONVar myObject = JSON.parse(outputsState);
+    
+        // JSON.typeof(jsonVar) can be used to get the type of the var
+        if (JSON.typeof(myObject) == "undefined") {
+          Serial.println("Parsing input failed!");
+          //return;
+        }
+    
+        if (debug == 1) {
+          Serial.print("JSON object = ");
+          Serial.println(myObject);
+          Serial.print("JSON length() = ");
+          Serial.println(myObject.length());
+        }
+        if (JSON.typeof(myObject) != "undefined") {
+          for (int iii = 0; iii < myObject.length(); iii++) {
+            sGPIO[iii] = atoi(myObject[iii]);
+          }
+        }
+      }
     }
     /*
       if(going_up==HIGH){
@@ -684,17 +685,42 @@ void loop() {
     }
     //}
     if (!old_controls) {
-      if (sGPIO[0])digitalWrite(D0, LOW);
-      if (sGPIO[1])digitalWrite(D0, HIGH);
-      if (sGPIO[2])digitalWrite(D1, LOW);
-      if (sGPIO[3])digitalWrite(D1, HIGH);
+      if (sGPIO[0]){
+        digitalWrite(D0, LOW);
+        logMessage[logNr++] = "<tr><td>" + currentDate + "</td><td> GPIO0 ON </td></tr>";
+      }
+      if (sGPIO[1]){
+        digitalWrite(D0, HIGH);
+        logMessage[logNr++] = "<tr><td>" + currentDate + "</td><td> GPIO0 OFF </td></tr>";
+      }
+      if (sGPIO[2]){
+        digitalWrite(D1, LOW);
+        logMessage[logNr++] = "<tr><td>" + currentDate + "</td><td> GPIO1 ON </td></tr>";
+      }
+      if (sGPIO[3]){
+        digitalWrite(D1, HIGH);
+        logMessage[logNr++] = "<tr><td>" + currentDate + "</td><td> GPIO2 OFF </td></tr>";
+      }
     } else {
-      if (sGPIO[0] && !sGPIO[1])digitalWrite(D0, LOW);
-      if (sGPIO[1] && !sGPIO[0])digitalWrite(D1, LOW);
-      if (sGPIO[2] && !sGPIO[3])digitalWrite(D2, LOW);
-      if (sGPIO[3] && !sGPIO[2])digitalWrite(D3, LOW);
+      if (sGPIO[0] && !sGPIO[1]){
+        digitalWrite(D0, LOW);
+        logMessage[logNr++] = "<tr><td>" + currentDate + "</td><td> UP </td></tr>";
+      }
+      if (sGPIO[1] && !sGPIO[0]){
+        digitalWrite(D1, LOW);
+        logMessage[logNr++] = "<tr><td>" + currentDate + "</td><td> DOWN </td></tr>";
+      }
+      if (sGPIO[2] && !sGPIO[3]){
+        digitalWrite(D2, LOW);
+        logMessage[logNr++] = "<tr><td>" + currentDate + "</td><td> UP2 </td></tr>";
+      }
+      if (sGPIO[3] && !sGPIO[2]){
+        digitalWrite(D3, LOW);
+        logMessage[logNr++] = "<tr><td>" + currentDate + "</td><td> DOWN2 </td></tr>";
+      }
       if (sGPIO[0] || sGPIO[1] || sGPIO[2] || sGPIO[3]){
-        delay(2000);
+  
+        //delay(2000);
         going_up=LOW;
         going_up2=LOW;
         going_down=LOW;
@@ -1606,6 +1632,11 @@ bool ObslugaKlienta() {
       client.println(timeDiff);
       client.print("bool old_controls = ");
       client.println(old_controls);
+      client.println("</p>");
+      client.println("<p>");
+      for (int i = 0; i < sizeof(sGPIO)/sizeof(sGPIO[0]); i++) {
+        client.print(sGPIO[i]);
+      }
       client.println("</p>");
       client.println("        </div>");
       client.println("      </div><br>");
