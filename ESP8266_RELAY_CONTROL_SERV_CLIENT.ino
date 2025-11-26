@@ -44,7 +44,8 @@ int sGPIO[4] = {0, 0, 0, 0};
 
 Dusk2Dawn Gliwice(50.2833, 18.6667, +2);
 
-float PROGRAM_VERSION = 20.61;
+float PROGRAM_VERSION = 20.62;
+//20.62 disable webapp
 //20.61 logging app messages
 //20.60 lower usage of internet data
 //20.55  new 
@@ -516,6 +517,7 @@ void loop() {
     }
     //############################# CZAS Z NTP  1 minuty = 1 * 60 sec = 2 * 60 * 1000ms #############################################   
     // ############################ POBIERANIE DANYCH Z SERWERA !!! ###################################
+    /*
     if (licznik_odpytania_SERVERA >= potwierdzenie_odpytania_SERVERA){
       licznik_odpytania_SERVERA=0;
       
@@ -548,6 +550,7 @@ void loop() {
         }
       }
     }
+    */
     /*
       if(going_up==HIGH){
       szacowany_stopien_otwarcia += 0.001*(currentMillis-szacowaneOtwieranieMillis)*3.5;
@@ -672,7 +675,7 @@ void loop() {
       Serial.println();
     }
     //delay(2000);
-
+    /*
     //if(sGPIO[0] > 0 || sGPIO[1] > 0 || sGPIO[2] > 0 || sGPIO[3] > 0){
     if (debug == 1) {
       Serial.println("sGPIO");
@@ -736,6 +739,7 @@ void loop() {
     if (ostatniaAktywacja >= 24 * 60 || currentHour < 01){
       ostatniaAktywacja = 0;
     }
+    */
 
     if (old_controls == LOW) {
       // AKTYWAXJA GDY AUTO
